@@ -1,255 +1,580 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  TextInput,
   StyleSheet,
-  StatusBar,
-  RefreshControl,
+  Platform,
+  Alert,
+  KeyboardAvoidingView,
+  Pressable,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { Expense, RootStackParamList, Category } from '../types';
-import { loadExpenses } from '../utils/storage';
-import {
-  getThisMonthTotal,
-  getAnnualTotal,
-  getNextPayment,
-  getCategoryMonthlyTotals,
-  formatCurrency,
-  formatDate,
-  getDaysUntil,
-  formatMonthYear,
-} from '../utils/calculations';
-import {
-  COLORS,
-  CATEGORY_LABELS,
-  CATEGORY_COLORS,
-  CATEGORY_ICONS,
-  CATEGORIES,
-  CYCLE_LABELS,
-} from '../constants';
-import { ExpenseCard } from '../components/ExpenseCard';
+import { LinearGradient } from 'expo-linear-gradient';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+// ─── 型 ───────────────────────────────────────────────────────────────────────
+
+type Category =
+  | 'subscription' | 'hospital' | 'medicine'
+  | 'haircut' | 'protein' | 'telecom' | 'other';
+
+type Cycle =
+  | 'weekly' | 'monthly' | 'yearly'
+  | 'every30days' | 'every45days'
+  | 'every2months' | 'every3months' | 'irregular';
+
+interface Expense {
+  id: string;
+  name: string;
+  amount: number;
+  category: Category;
+  cycle: Cycle;
+  nextDate: string;
+  memo: string;
+}
+
+// ─── 定数 ─────────────────────────────────────────────────────────────────────
+
+const CAT: Record<Category, { label: string; color: string; icon: string }> = {
+  subscription: { label: 'サブスク',    color: '#6C63FF', icon: 'tv-outline' },
+  hospital:     { label: '病院',        color: '#F56565', icon: 'medical-outline' },
+  medicine:     { label: '薬',          color: '#4299E1', icon: 'flask-outline' },
+  haircut:      { label: '散髪',        color: '#ED64A6', icon: 'cut-outline' },
+  protein:      { label: 'プロテイン',  color: '#F6AD55', icon: 'fitness-outline' },
+  telecom:      { label: '通信費',      color: '#38B2AC', icon: 'phone-portrait-outline' },
+  other:        { label: 'その他',      color: '#A0AEC0', icon: 'apps-outline' },
 };
 
-export function HomeScreen({ navigation }: Props) {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+const CYCLE_LABEL: Record<Cycle, string> = {
+  weekly:       '毎週',
+  monthly:      '毎月',
+  yearly:       '毎年',
+  every30days:  '30日ごと',
+  every45days:  '45日ごと',
+  every2months: '2か月ごと',
+  every3months: '3か月ごと',
+  irregular:    '不定期',
+};
 
-  const load = useCallback(async () => {
-    const data = await loadExpenses();
-    setExpenses(data);
-  }, []);
+const CATEGORIES = Object.keys(CAT) as Category[];
+const CYCLES     = Object.keys(CYCLE_LABEL) as Cycle[];
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+// ─── ユーティリティ ───────────────────────────────────────────────────────────
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
+const genId  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const yen    = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
+const fmtDate = (iso: string) => {
+  try { return format(new Date(iso), 'M月d日(E)', { locale: ja }); }
+  catch { return iso; }
+};
+
+function monthlyEq(amount: number, cycle: Cycle): number {
+  const m: Record<Cycle, number> = {
+    weekly:       (amount * 52) / 12,
+    monthly:      amount,
+    yearly:       amount / 12,
+    every30days:  amount,
+    every45days:  (amount * 365) / 45 / 12,
+    every2months: amount / 2,
+    every3months: amount / 3,
+    irregular:    0,
   };
+  return m[cycle];
+}
 
-  const thisMonthTotal = getThisMonthTotal(expenses);
-  const annualTotal = getAnnualTotal(expenses);
-  const nextPayment = getNextPayment(expenses);
-  const categoryTotals = getCategoryMonthlyTotals(expenses);
-  const monthlyTotal = Object.values(categoryTotals).reduce((s, v) => s + v, 0);
+function daysUntil(iso: string): number {
+  const diff = new Date(iso).setHours(0,0,0,0) - new Date().setHours(0,0,0,0);
+  return Math.ceil(diff / 86400000);
+}
 
-  const sortedExpenses = [...expenses].sort(
-    (a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime()
-  );
+// ─── 初期フォーム ────────────────────────────────────────────────────────────
 
-  const activeCategoryEntries = CATEGORIES
-    .map(cat => ({ cat, amount: categoryTotals[cat] ?? 0 }))
-    .filter(({ amount }) => amount > 0)
-    .sort((a, b) => b.amount - a.amount);
+interface FormState {
+  name: string;
+  amount: string;
+  category: Category;
+  cycle: Cycle;
+  nextDate: Date;
+  memo: string;
+}
+
+const blankForm = (): FormState => ({
+  name:     '',
+  amount:   '',
+  category: 'subscription',
+  cycle:    'monthly',
+  nextDate: new Date(),
+  memo:     '',
+});
+
+// ─── ExpenseCard コンポーネント ───────────────────────────────────────────────
+
+function ExpenseCard({
+  expense,
+  onEdit,
+  onDelete,
+}: {
+  expense: Expense;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { label, color, icon } = CAT[expense.category];
+  const days = daysUntil(expense.nextDate);
+  const overdue = days < 0;
+  const soon    = days >= 0 && days <= 7;
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Header */}
-        <LinearGradient
-          colors={['#7C73FF', '#6C63FF', '#5A52E8']}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.headerTitle}>固定費管理</Text>
-          <Text style={styles.headerSub}>{formatMonthYear()}</Text>
+    <TouchableOpacity style={s.card} onPress={onEdit} activeOpacity={0.75}>
+      {/* カテゴリアイコン */}
+      <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
+        <Ionicons name={icon as never} size={22} color={color} />
+      </View>
 
-          {/* Summary Cards */}
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>今月の予定出費</Text>
-              <Text style={styles.summaryAmount}>{formatCurrency(thisMonthTotal)}</Text>
-              <Text style={styles.summaryNote}>
-                {expenses.filter(e => {
-                  const d = new Date(e.nextDate);
-                  const now = new Date();
-                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                }).length}件
-              </Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>年間見込み</Text>
-              <Text style={styles.summaryAmount}>{formatCurrency(Math.round(annualTotal))}</Text>
-              <Text style={styles.summaryNote}>月平均 {formatCurrency(Math.round(annualTotal / 12))}</Text>
-            </View>
+      {/* 中央テキスト */}
+      <View style={s.cardBody}>
+        <View style={s.cardRow}>
+          <View style={[s.catBadge, { backgroundColor: color + '18' }]}>
+            <Text style={[s.catBadgeText, { color }]}>{label}</Text>
           </View>
-        </LinearGradient>
-
-        <View style={styles.body}>
-          {/* Next Payment */}
-          {nextPayment && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>次の支払い</Text>
-              <TouchableOpacity
-                style={styles.nextCard}
-                onPress={() => navigation.navigate('Detail', { expense: nextPayment })}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#FF6584', '#FF4D6A']}
-                  style={styles.nextCardGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={styles.nextCardContent}>
-                    <View>
-                      <Text style={styles.nextCardLabel}>次回支払い</Text>
-                      <Text style={styles.nextCardName}>{nextPayment.name}</Text>
-                      <Text style={styles.nextCardDate}>{formatDate(nextPayment.nextDate)}</Text>
-                    </View>
-                    <View style={styles.nextCardRight}>
-                      <Text style={styles.nextCardAmount}>{formatCurrency(nextPayment.amount)}</Text>
-                      {(() => {
-                        const d = getDaysUntil(nextPayment.nextDate);
-                        return (
-                          <View style={styles.nextCardBadge}>
-                            <Text style={styles.nextCardBadgeText}>
-                              {d < 0 ? `${Math.abs(d)}日超過` : d === 0 ? '今日' : `あと${d}日`}
-                            </Text>
-                          </View>
-                        );
-                      })()}
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Category Summary */}
-          {activeCategoryEntries.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>カテゴリ別 月額換算</Text>
-              <View style={styles.categoryCard}>
-                {activeCategoryEntries.map(({ cat, amount }) => {
-                  const color = CATEGORY_COLORS[cat as Category];
-                  const pct = monthlyTotal > 0 ? (amount / monthlyTotal) * 100 : 0;
-                  return (
-                    <View key={cat} style={styles.categoryRow}>
-                      <View style={styles.categoryLeft}>
-                        <View style={[styles.categoryDot, { backgroundColor: color }]} />
-                        <View style={[styles.catIconWrap, { backgroundColor: color + '18' }]}>
-                          <Ionicons name={CATEGORY_ICONS[cat as Category] as never} size={14} color={color} />
-                        </View>
-                        <Text style={styles.categoryName}>{CATEGORY_LABELS[cat as Category]}</Text>
-                      </View>
-                      <View style={styles.categoryBarWrap}>
-                        <View style={[styles.categoryBar, { width: `${pct}%`, backgroundColor: color }]} />
-                      </View>
-                      <Text style={styles.categoryAmount}>{formatCurrency(Math.round(amount))}</Text>
-                    </View>
-                  );
-                })}
-                <View style={styles.categoryTotal}>
-                  <Text style={styles.categoryTotalLabel}>月額合計</Text>
-                  <Text style={styles.categoryTotalAmount}>{formatCurrency(Math.round(monthlyTotal))}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Expense List */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>登録一覧</Text>
-              <Text style={styles.sectionCount}>{expenses.length}件</Text>
-            </View>
-            {sortedExpenses.length === 0 ? (
-              <View style={styles.empty}>
-                <Ionicons name="receipt-outline" size={48} color={COLORS.border} />
-                <Text style={styles.emptyText}>まだ登録がありません</Text>
-                <Text style={styles.emptySubText}>右下の＋ボタンから追加できます</Text>
-              </View>
-            ) : (
-              sortedExpenses.map(e => (
-                <ExpenseCard
-                  key={e.id}
-                  expense={e}
-                  onPress={() => navigation.navigate('Detail', { expense: e })}
-                />
-              ))
-            )}
-          </View>
+          <Text style={s.cycleBadge}>{CYCLE_LABEL[expense.cycle]}</Text>
         </View>
-      </ScrollView>
+        <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
+        <Text style={[
+          s.cardDate,
+          overdue && s.textRed,
+          soon && !overdue && s.textOrange,
+        ]}>
+          {fmtDate(expense.nextDate)}
+          {'  '}
+          {overdue
+            ? `(${Math.abs(days)}日超過)`
+            : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
+        </Text>
+        {expense.memo ? (
+          <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text>
+        ) : null}
+      </View>
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddEdit', {})}
-        activeOpacity={0.85}
-      >
-        <LinearGradient colors={['#7C73FF', '#6C63FF']} style={styles.fabGradient}>
-          <Ionicons name="add" size={28} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
+      {/* 右側: 金額 + 削除 */}
+      <View style={s.cardRight}>
+        <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
+        <TouchableOpacity onPress={onDelete} hitSlop={8} style={s.deleteBtn}>
+          <Ionicons name="trash-outline" size={16} color="#FC5A5A" />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── ピッカーモーダル ────────────────────────────────────────────────────────
+
+function ChipPicker<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  getLabel,
+  getColor,
+}: {
+  label: string;
+  options: T[];
+  value: T;
+  onChange: (v: T) => void;
+  getLabel: (v: T) => string;
+  getColor?: (v: T) => string;
+}) {
+  return (
+    <View style={s.fieldWrap}>
+      <Text style={s.fieldLabel}>{label}</Text>
+      <View style={s.chipGrid}>
+        {options.map(opt => {
+          const selected = opt === value;
+          const color = getColor ? getColor(opt) : '#6C63FF';
+          return (
+            <TouchableOpacity
+              key={opt}
+              style={[s.chip, selected && { backgroundColor: color, borderColor: color }]}
+              onPress={() => onChange(opt)}
+            >
+              <Text style={[s.chipText, selected && s.chipTextSelected]}>
+                {getLabel(opt)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+// ─── 追加・編集モーダル ───────────────────────────────────────────────────────
+
+function ExpenseModal({
+  visible,
+  isEdit,
+  form,
+  setForm,
+  onSave,
+  onClose,
+}: {
+  visible: boolean;
+  isEdit: boolean;
+  form: FormState;
+  setForm: React.Dispatch<React.SetStateAction<FormState>>;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const [showDate, setShowDate] = useState(false);
+
+  const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
+    setForm(f => ({ ...f, [key]: val }));
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={s.modalRoot}>
+          {/* ヘッダ */}
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={onClose} style={s.modalBtn}>
+              <Text style={s.modalBtnCancel}>キャンセル</Text>
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>{isEdit ? '支出を編集' : '支出を追加'}</Text>
+            <TouchableOpacity onPress={onSave} style={s.modalBtn}>
+              <Text style={s.modalBtnSave}>保存</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+            <View style={s.modalBody}>
+
+              {/* 名前 */}
+              <View style={s.fieldWrap}>
+                <Text style={s.fieldLabel}>名前 <Text style={s.required}>*</Text></Text>
+                <TextInput
+                  style={s.textInput}
+                  value={form.name}
+                  onChangeText={v => set('name', v)}
+                  placeholder="例: Netflix、散髪代、薬局"
+                  placeholderTextColor="#CBD5E0"
+                  returnKeyType="next"
+                />
+              </View>
+
+              {/* 金額 */}
+              <View style={s.fieldWrap}>
+                <Text style={s.fieldLabel}>金額（円） <Text style={s.required}>*</Text></Text>
+                <View style={s.amountRow}>
+                  <Text style={s.yenSign}>¥</Text>
+                  <TextInput
+                    style={[s.textInput, { flex: 1, borderWidth: 0, paddingLeft: 4 }]}
+                    value={form.amount}
+                    onChangeText={v => set('amount', v.replace(/[^0-9]/g, ''))}
+                    placeholder="0"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
+
+              {/* カテゴリ */}
+              <ChipPicker
+                label="カテゴリ"
+                options={CATEGORIES}
+                value={form.category}
+                onChange={v => set('category', v)}
+                getLabel={v => CAT[v].label}
+                getColor={v => CAT[v].color}
+              />
+
+              {/* 支払周期 */}
+              <ChipPicker
+                label="支払周期"
+                options={CYCLES}
+                value={form.cycle}
+                onChange={v => set('cycle', v)}
+                getLabel={v => CYCLE_LABEL[v]}
+              />
+
+              {/* 次回支払日 */}
+              <View style={s.fieldWrap}>
+                <Text style={s.fieldLabel}>次回支払日</Text>
+                <TouchableOpacity
+                  style={[s.textInput, s.dateSelector]}
+                  onPress={() => setShowDate(true)}
+                >
+                  <Ionicons name="calendar-outline" size={18} color="#6C63FF" />
+                  <Text style={s.dateSelectorText}>
+                    {format(form.nextDate, 'yyyy年M月d日(E)', { locale: ja })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* DatePicker */}
+              {showDate && (
+                <DateTimePicker
+                  value={form.nextDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  locale="ja-JP"
+                  onChange={(_, date) => {
+                    if (Platform.OS === 'android') setShowDate(false);
+                    if (date) set('nextDate', date);
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showDate && (
+                <TouchableOpacity
+                  style={s.dateConfirm}
+                  onPress={() => setShowDate(false)}
+                >
+                  <Text style={s.dateConfirmText}>完了</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* メモ */}
+              <View style={s.fieldWrap}>
+                <Text style={s.fieldLabel}>メモ（任意）</Text>
+                <TextInput
+                  style={[s.textInput, s.memoInput]}
+                  value={form.memo}
+                  onChangeText={v => set('memo', v)}
+                  placeholder="備考など"
+                  placeholderTextColor="#CBD5E0"
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── メイン画面 ───────────────────────────────────────────────────────────────
+
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editId, setEditId]     = useState<string | null>(null);
+  const [form, setForm]         = useState<FormState>(blankForm());
+
+  // ── 集計 ──
+  const monthlyTotal = expenses.reduce((s, e) => s + monthlyEq(e.amount, e.cycle), 0);
+  const annualTotal  = monthlyTotal * 12;
+  const sorted = [...expenses].sort(
+    (a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime()
+  );
+  const next = sorted.find(e => e.cycle !== 'irregular');
+
+  // ── 操作 ──
+  const openAdd = () => {
+    setEditId(null);
+    setForm(blankForm());
+    setModalVisible(true);
+  };
+
+  const openEdit = (exp: Expense) => {
+    setEditId(exp.id);
+    setForm({
+      name:     exp.name,
+      amount:   String(exp.amount),
+      category: exp.category,
+      cycle:    exp.cycle,
+      nextDate: new Date(exp.nextDate),
+      memo:     exp.memo,
+    });
+    setModalVisible(true);
+  };
+
+  const handleSave = () => {
+    const amount = parseInt(form.amount, 10);
+    if (!form.name.trim()) {
+      Alert.alert('入力エラー', '名前を入力してください');
+      return;
+    }
+    if (!form.amount || isNaN(amount) || amount <= 0) {
+      Alert.alert('入力エラー', '正しい金額を入力してください');
+      return;
+    }
+    const exp: Expense = {
+      id:       editId ?? genId(),
+      name:     form.name.trim(),
+      amount,
+      category: form.category,
+      cycle:    form.cycle,
+      nextDate: form.nextDate.toISOString(),
+      memo:     form.memo.trim(),
+    };
+    setExpenses(prev =>
+      editId ? prev.map(e => e.id === editId ? exp : e) : [...prev, exp]
+    );
+    setModalVisible(false);
+  };
+
+  const handleDelete = (id: string) => {
+    Alert.alert('削除の確認', 'この項目を削除しますか？', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '削除', style: 'destructive',
+        onPress: () => setExpenses(prev => prev.filter(e => e.id !== id)),
+      },
+    ]);
+  };
+
+  // ─── レンダリング ─────────────────────────────────────────────────────────
+
+  return (
+    <View style={s.root}>
+      {/* ── ヘッダ（グラデーション） ── */}
+      <LinearGradient
+        colors={['#7B6FFF', '#6C63FF', '#5A52E8']}
+        style={[s.header, { paddingTop: insets.top + 12 }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Text style={s.appTitle}>固定費管理</Text>
+        <Text style={s.appSub}>{format(new Date(), 'yyyy年M月', { locale: ja })}</Text>
+
+        {/* サマリーカード */}
+        <View style={s.summaryBox}>
+          <View style={s.summaryItem}>
+            <Text style={s.summaryLabel}>月額見込み</Text>
+            <Text style={s.summaryValue}>{yen(monthlyTotal)}</Text>
+            <Text style={s.summaryNote}>{expenses.length}件登録</Text>
+          </View>
+          <View style={s.summaryDivider} />
+          <View style={s.summaryItem}>
+            <Text style={s.summaryLabel}>年間見込み</Text>
+            <Text style={s.summaryValue}>{yen(annualTotal)}</Text>
+            <Text style={s.summaryNote}>
+              月平均 {yen(annualTotal / 12)}
+            </Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* ── 次の支払い ── */}
+      {next && (
+        <View style={s.nextBox}>
+          <Text style={s.nextLabel}>次の支払い</Text>
+          <View style={s.nextRow}>
+            <View style={[s.nextDot, { backgroundColor: CAT[next.category].color }]} />
+            <Text style={s.nextName}>{next.name}</Text>
+            <Text style={s.nextDate}>{fmtDate(next.nextDate)}</Text>
+            <Text style={s.nextAmount}>{yen(next.amount)}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* ── 一覧 ── */}
+      <View style={s.listHeader}>
+        <Text style={s.listTitle}>登録一覧</Text>
+        <Text style={s.listCount}>{expenses.length}件</Text>
+      </View>
+
+      <ScrollView
+        style={s.list}
+        contentContainerStyle={[
+          s.listContent,
+          { paddingBottom: insets.bottom + 90 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {sorted.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="receipt-outline" size={52} color="#CBD5E0" />
+            <Text style={s.emptyTitle}>登録がありません</Text>
+            <Text style={s.emptySub}>右下の ＋ ボタンから追加できます</Text>
+          </View>
+        ) : (
+          sorted.map(exp => (
+            <ExpenseCard
+              key={exp.id}
+              expense={exp}
+              onEdit={() => openEdit(exp)}
+              onDelete={() => handleDelete(exp.id)}
+            />
+          ))
+        )}
+      </ScrollView>
+
+      {/* ── FAB ── */}
+      <TouchableOpacity
+        style={[s.fab, { bottom: insets.bottom + 24 }]}
+        onPress={openAdd}
+        activeOpacity={0.85}
+      >
+        <LinearGradient
+          colors={['#7B6FFF', '#6C63FF']}
+          style={s.fabInner}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={s.fabText}>＋</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* ── 追加/編集モーダル ── */}
+      <ExpenseModal
+        visible={modalVisible}
+        isEdit={!!editId}
+        form={form}
+        setForm={setForm}
+        onSave={handleSave}
+        onClose={() => setModalVisible(false)}
+      />
+    </View>
+  );
+}
+
+// ─── スタイル ─────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F5F6FA',
   },
+
+  // ── ヘッダ ──
   header: {
-    paddingTop: 60,
-    paddingBottom: 32,
     paddingHorizontal: 20,
+    paddingBottom: 24,
   },
-  headerTitle: {
+  appTitle: {
     fontSize: 26,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.5,
   },
-  headerSub: {
-    fontSize: 14,
+  appSub: {
+    fontSize: 13,
     color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  summaryRow: {
+  summaryBox: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 18,
     padding: 16,
   },
-  summaryCard: {
+  summaryItem: {
     flex: 1,
     alignItems: 'center',
   },
@@ -262,202 +587,335 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255,255,255,0.75)',
     fontWeight: '600',
-    letterSpacing: 0.3,
-    marginBottom: 6,
+    marginBottom: 5,
   },
-  summaryAmount: {
-    fontSize: 22,
+  summaryValue: {
+    fontSize: 21,
     fontWeight: '800',
     color: '#fff',
   },
   summaryNote: {
     fontSize: 11,
     color: 'rgba(255,255,255,0.6)',
-    marginTop: 4,
+    marginTop: 3,
   },
-  body: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 10,
-  },
-  sectionCount: {
-    fontSize: 13,
-    color: COLORS.subtext,
-    marginBottom: 10,
-  },
-  nextCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#FF6584',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  nextCardGradient: {
-    padding: 20,
-  },
-  nextCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  nextCardLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  nextCardName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  nextCardDate: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  nextCardRight: {
-    alignItems: 'flex-end',
-  },
-  nextCardAmount: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 6,
-  },
-  nextCardBadge: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  nextCardBadgeText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '700',
-  },
-  categoryCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+
+  // ── 次の支払い ──
+  nextBox: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
-  categoryRow: {
+  nextLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#A0AEC0',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  nextRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
     gap: 8,
   },
-  categoryLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 100,
-    gap: 6,
+  nextDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  categoryDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  catIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryName: {
-    fontSize: 12,
-    color: COLORS.text,
-    fontWeight: '500',
+  nextName: {
     flex: 1,
-  },
-  categoryBarWrap: {
-    flex: 1,
-    height: 6,
-    backgroundColor: COLORS.background,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  categoryBar: {
-    height: 6,
-    borderRadius: 3,
-  },
-  categoryAmount: {
-    width: 72,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'right',
+    color: '#1A202C',
   },
-  categoryTotal: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 12,
-    marginTop: 4,
-  },
-  categoryTotalLabel: {
+  nextDate: {
     fontSize: 13,
-    color: COLORS.subtext,
-    fontWeight: '600',
+    color: '#718096',
   },
-  categoryTotalAmount: {
+  nextAmount: {
     fontSize: 15,
     fontWeight: '800',
-    color: COLORS.primary,
+    color: '#6C63FF',
+    marginLeft: 8,
   },
-  empty: {
+
+  // ── リスト ──
+  listHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 40,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A202C',
+  },
+  listCount: {
+    fontSize: 13,
+    color: '#A0AEC0',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
     gap: 8,
   },
-  emptyText: {
+
+  // ── カード ──
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cardBody: {
+    flex: 1,
+    gap: 3,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  catBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 20,
+  },
+  catBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  cycleBadge: {
+    fontSize: 11,
+    color: '#A0AEC0',
+    fontWeight: '500',
+  },
+  cardName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A202C',
+  },
+  cardDate: {
+    fontSize: 12,
+    color: '#718096',
+  },
+  cardMemo: {
+    fontSize: 11,
+    color: '#A0AEC0',
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+    marginLeft: 8,
+  },
+  cardAmount: {
     fontSize: 16,
-    color: COLORS.subtext,
+    fontWeight: '800',
+    color: '#1A202C',
+  },
+  deleteBtn: {
+    padding: 4,
+  },
+
+  // ── 色 ──
+  textRed:    { color: '#FC5A5A' },
+  textOrange: { color: '#FF8C42' },
+
+  // ── 空表示 ──
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 10,
+  },
+  emptyTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#CBD5E0',
   },
-  emptySubText: {
+  emptySub: {
     fontSize: 13,
-    color: COLORS.border,
+    color: '#CBD5E0',
   },
+
+  // ── FAB ──
   fab: {
     position: 'absolute',
-    bottom: 32,
-    right: 24,
-    borderRadius: 28,
-    shadowColor: COLORS.primary,
+    right: 22,
+    borderRadius: 30,
+    shadowColor: '#6C63FF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
   },
-  fabGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  fabInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  fabText: {
+    fontSize: 28,
+    color: '#fff',
+    lineHeight: 32,
+    fontWeight: '400',
+  },
+
+  // ── モーダル ──
+  modalRoot: {
+    flex: 1,
+    backgroundColor: '#F5F6FA',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  modalBtn: {
+    minWidth: 64,
+  },
+  modalBtnCancel: {
+    fontSize: 16,
+    color: '#718096',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A202C',
+  },
+  modalBtnSave: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6C63FF',
+    textAlign: 'right',
+  },
+  modalBody: {
+    padding: 16,
+    gap: 4,
+  },
+
+  // ── フォームフィールド ──
+  fieldWrap: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#718096',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  required: {
+    color: '#FC5A5A',
+  },
+  textInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+    color: '#1A202C',
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    paddingLeft: 14,
+  },
+  yenSign: {
+    fontSize: 18,
+    color: '#718096',
+    fontWeight: '600',
+  },
+  memoInput: {
+    minHeight: 80,
+    paddingTop: 13,
+  },
+
+  // ── チップピッカー ──
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#fff',
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#718096',
+    fontWeight: '600',
+  },
+  chipTextSelected: {
+    color: '#fff',
+  },
+
+  // ── 日付セレクタ ──
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateSelectorText: {
+    fontSize: 16,
+    color: '#1A202C',
+  },
+  dateConfirm: {
+    alignItems: 'flex-end',
+    paddingRight: 4,
+    paddingVertical: 8,
+    marginTop: -8,
+    marginBottom: 8,
+  },
+  dateConfirmText: {
+    fontSize: 16,
+    color: '#6C63FF',
+    fontWeight: '700',
   },
 });
