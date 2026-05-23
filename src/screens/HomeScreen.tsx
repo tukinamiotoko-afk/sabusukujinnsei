@@ -196,7 +196,11 @@ function TemplateBrowser({ onSelect }: {
                   <Text style={s.tmplItemName}>{item.name}</Text>
                   <Text style={s.tmplItemMeta}>{CAT[cat].label}</Text>
                 </View>
-                {item.amount ? <Text style={s.tmplItemAmount}>{yen(item.amount)}</Text> : null}
+                {item.amount ? (
+                  <Text style={s.tmplItemAmount}>
+                    {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
+                  </Text>
+                ) : null}
                 <Ionicons name="add-circle-outline" size={22} color="#6C63FF" />
               </TouchableOpacity>
             ))
@@ -242,7 +246,11 @@ function TemplateBrowser({ onSelect }: {
                 <Text style={s.tmplItemName}>{item.name}</Text>
                 {item.cycle && <Text style={s.tmplItemMeta}>{CYCLE_LABEL[item.cycle]}</Text>}
               </View>
-              {item.amount ? <Text style={s.tmplItemAmount}>{yen(item.amount)}</Text> : null}
+              {item.amount ? (
+                <Text style={s.tmplItemAmount}>
+                  {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
+                </Text>
+              ) : null}
               <Ionicons name="add-circle-outline" size={22} color="#6C63FF" />
             </TouchableOpacity>
           ))}
