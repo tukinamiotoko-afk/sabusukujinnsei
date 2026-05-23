@@ -93,7 +93,7 @@ function lookupIcon(name: string): SimpleIcon | null {
   return null;
 }
 
-// ─── ServiceIcon コンポーネント ───────────────────────────────────────────────
+// ─── ServiceIcon コンポーネント（テンプレート一覧用・大） ─────────────────────
 
 interface Props {
   name: string;
@@ -116,6 +116,29 @@ export default function ServiceIcon({ name, size = 40 }: Props) {
   );
 }
 
+// ─── ServiceIconMini（カレンダーグリッド用・小） ──────────────────────────────
+
+interface MiniProps {
+  name: string;
+  size?: number;
+}
+
+export function ServiceIconMini({ name, size = 16 }: MiniProps) {
+  const icon = lookupIcon(name);
+  if (!icon) return null;
+
+  const brandColor = '#' + icon.hex;
+  const iconSize = size * 0.8;
+
+  return (
+    <View style={[miniStyles.container, { width: size, height: size, borderRadius: size * 0.3 }]}>
+      <Svg width={iconSize} height={iconSize} viewBox="0 0 24 24">
+        <Path d={icon.path} fill={brandColor} />
+      </Svg>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
@@ -126,6 +149,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 2,
+  },
+});
+
+const miniStyles = StyleSheet.create({
+  container: {
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
 });
 

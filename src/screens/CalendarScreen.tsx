@@ -17,6 +17,7 @@ import {
   cycleDisplay,
   type Expense,
 } from '../context/ExpensesContext';
+import ServiceIcon, { ServiceIconMini, hasServiceIcon } from '../components/ServiceIcon';
 
 const yen = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
 
@@ -62,7 +63,7 @@ function DayCell({
   if (day === null) return <View style={c.dayCell} />;
 
   const hits = day !== null ? getExpensesForDay(expenses, year, month, day) : [];
-  const dots = hits.slice(0, 3);
+  const shown = hits.slice(0, 3);
 
   return (
     <TouchableOpacity
@@ -74,9 +75,11 @@ function DayCell({
         {day}
       </Text>
       <View style={c.dotsRow}>
-        {dots.map((e, i) => (
-          <View key={i} style={[c.dot, { backgroundColor: CAT[e.category].color }]} />
-        ))}
+        {shown.map((e, i) =>
+          hasServiceIcon(e.name)
+            ? <ServiceIconMini key={i} name={e.name} size={14} />
+            : <View key={i} style={[c.dot, { backgroundColor: CAT[e.category].color }]} />
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -201,9 +204,12 @@ export default function CalendarScreen() {
                 const { label, color, icon } = CAT[exp.category];
                 return (
                   <View key={exp.id} style={c.detailCard}>
-                    <View style={[c.detailIcon, { backgroundColor: color + '20' }]}>
-                      <Ionicons name={icon as never} size={20} color={color} />
-                    </View>
+                    {hasServiceIcon(exp.name)
+                      ? <ServiceIcon name={exp.name} size={40} />
+                      : <View style={[c.detailIcon, { backgroundColor: color + '20' }]}>
+                          <Ionicons name={icon as never} size={20} color={color} />
+                        </View>
+                    }
                     <View style={c.detailBody}>
                       <Text style={c.detailName} numberOfLines={1}>{exp.name}</Text>
                       <View style={c.detailMeta}>
