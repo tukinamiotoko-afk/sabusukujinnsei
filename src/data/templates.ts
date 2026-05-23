@@ -141,18 +141,91 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'Dropbox Plus（年額）',          amount: 120,   cycle: 'yearly',  currency: 'USD' },
     { name: 'Dropbox Essentials（月額）',    amount: 20,    cycle: 'monthly', currency: 'USD' },
 
-    // ── AI・開発ツール ────────────────────────────────────────────────
-    { name: 'ChatGPT Plus',                 amount: 3000,  cycle: 'monthly' },
-    { name: 'ChatGPT Pro',                  amount: 30000, cycle: 'monthly' },
-    { name: 'Claude Pro',                   amount: 3000,  cycle: 'monthly' },
-    { name: 'Claude Max（5倍）',            amount: 100,   cycle: 'monthly', currency: 'USD' },
-    { name: 'Claude Max（20倍）',           amount: 200,   cycle: 'monthly', currency: 'USD' },
-    { name: 'GitHub Copilot Individual',    amount: 10,    cycle: 'monthly', currency: 'USD' },
-    { name: 'GitHub Copilot Individual（年額）', amount: 100, cycle: 'yearly', currency: 'USD' },
-    { name: 'Notion Plus（月額）',           amount: 16,    cycle: 'monthly', currency: 'USD' },
-    { name: 'Notion Plus（年額）',           amount: 96,    cycle: 'yearly',  currency: 'USD' },
-    { name: 'Figma Starter',               amount: 0,     cycle: 'monthly', currency: 'USD' },
-    { name: 'Figma Professional',          amount: 15,    cycle: 'monthly', currency: 'USD' },
+    // ── AI チャット・アシスタント ─────────────────────────────────────
+    { name: 'ChatGPT Plus',                      amount: 3000,  cycle: 'monthly' },
+    { name: 'ChatGPT Pro',                       amount: 30000, cycle: 'monthly' },
+    { name: 'Claude Pro',                        amount: 3000,  cycle: 'monthly' },
+    { name: 'Claude Max（5倍）',                 amount: 100,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Claude Max（20倍）',                amount: 200,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Microsoft Copilot Pro',             amount: 3200,  cycle: 'monthly' },
+    { name: 'Google One AI Premium（Gemini）',   amount: 2900,  cycle: 'monthly' },
+    { name: 'Perplexity Pro（月額）',            amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Perplexity Pro（年額）',            amount: 200,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'You.com Pro',                       amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Grok（X Premium付き）',             amount: 980,   cycle: 'monthly' },
+
+    // ── AI 画像生成 ───────────────────────────────────────────────────
+    { name: 'Midjourney Basic',                  amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Standard',               amount: 30,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Pro',                    amount: 60,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Mega',                   amount: 120,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Leonardo AI Apprentice',            amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Leonardo AI Artisan',               amount: 24,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Leonardo AI Maestro',               amount: 48,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Ideogram Pro（月額）',               amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Ideogram Pro（年額）',               amount: 192,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Playground AI Pro',                 amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Krea AI（月額）',                   amount: 24,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Magnific AI（月額）',               amount: 39,    cycle: 'monthly', currency: 'USD' },
+    { name: 'NovelAI Tablet',                    amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'NovelAI Scroll',                    amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'NovelAI Opus',                      amount: 25,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Stable Diffusion（DreamStudio）',   amount: 10,    cycle: 'monthly', currency: 'USD' },
+
+    // ── AI コーディング ───────────────────────────────────────────────
+    { name: 'GitHub Copilot Individual',         amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'GitHub Copilot Individual（年額）', amount: 100,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Cursor Pro（月額）',                amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Cursor Pro（年額）',                amount: 192,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Windsurf Pro（月額）',              amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Tabnine Pro',                       amount: 12,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Replit Core（月額）',               amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'JetBrains AI Assistant',            amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Amazon CodeWhisperer Pro',          amount: 19,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Bolt.new（月額）',                  amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'v0 by Vercel（月額）',              amount: 20,    cycle: 'monthly', currency: 'USD' },
+
+    // ── AI 音声・音楽生成 ─────────────────────────────────────────────
+    { name: 'ElevenLabs Starter',                amount: 5,     cycle: 'monthly', currency: 'USD' },
+    { name: 'ElevenLabs Creator',                amount: 22,    cycle: 'monthly', currency: 'USD' },
+    { name: 'ElevenLabs Pro',                    amount: 99,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Murf AI Basic',                     amount: 29,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Suno Pro（月額）',                  amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Suno Pro（年額）',                  amount: 96,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Udio Standard（月額）',             amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Boomy Standard',                    amount: 10,    cycle: 'monthly', currency: 'USD' },
+
+    // ── AI ライティング ───────────────────────────────────────────────
+    { name: 'Grammarly Premium（月額）',         amount: 30,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Grammarly Premium（年額）',         amount: 144,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Jasper（月額）',                    amount: 49,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Jasper（年額）',                    amount: 468,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Copy.ai Pro（月額）',               amount: 49,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Writesonic（月額）',                amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'QuillBot Premium（月額）',          amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'QuillBot Premium（年額）',          amount: 80,    cycle: 'yearly',  currency: 'USD' },
+
+    // ── AI 翻訳 ───────────────────────────────────────────────────────
+    { name: 'DeepL Pro Starter',                 amount: 1200,  cycle: 'monthly' },
+    { name: 'DeepL Pro Advanced',                amount: 2500,  cycle: 'monthly' },
+    { name: 'DeepL Pro Ultimate',                amount: 6500,  cycle: 'monthly' },
+
+    // ── AI 議事録・ミーティング ───────────────────────────────────────
+    { name: 'Otter.ai Pro（月額）',              amount: 17,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Otter.ai Pro（年額）',              amount: 120,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Fireflies.ai Pro（月額）',          amount: 18,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Fathom Premium',                    amount: 19,    cycle: 'monthly', currency: 'USD' },
+
+    // ── AI 3D・その他生成 ─────────────────────────────────────────────
+    { name: 'Meshy AI Pro（月額）',              amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Luma AI Standard（月額）',          amount: 30,    cycle: 'monthly', currency: 'USD' },
+    { name: 'D-ID Lite（月額）',                 amount: 6,     cycle: 'monthly', currency: 'USD' },
+
+    // ── 既存（プロジェクト管理系）────────────────────────────────────
+    { name: 'Notion Plus（月額）',               amount: 16,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Notion Plus（年額）',               amount: 96,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Figma Starter',                     amount: 0,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Figma Professional',                amount: 15,    cycle: 'monthly', currency: 'USD' },
 
     // ── VPN（USD）────────────────────────────────────────────────────
     { name: 'NordVPN Standard（月額）',      amount: 13,    cycle: 'monthly', currency: 'USD' },
