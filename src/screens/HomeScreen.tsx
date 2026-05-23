@@ -30,6 +30,7 @@ import {
   type Expense,
 } from '../context/ExpensesContext';
 import { TEMPLATES, type TemplateItem } from '../data/templates';
+import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
 
@@ -189,9 +190,12 @@ function TemplateBrowser({ onSelect }: {
                 onPress={() => onSelect(cat, item)}
                 activeOpacity={0.7}
               >
-                <View style={[s.tmplItemIcon, { backgroundColor: CAT[cat].color + '20' }]}>
-                  <Ionicons name={CAT[cat].icon as never} size={18} color={CAT[cat].color} />
-                </View>
+                {hasServiceIcon(item.name)
+                  ? <ServiceIcon name={item.name} size={40} />
+                  : <View style={[s.tmplItemIcon, { backgroundColor: CAT[cat].color + '20' }]}>
+                      <Ionicons name={CAT[cat].icon as never} size={18} color={CAT[cat].color} />
+                    </View>
+                }
                 <View style={{ flex: 1 }}>
                   <Text style={s.tmplItemName}>{item.name}</Text>
                   <Text style={s.tmplItemMeta}>{CAT[cat].label}</Text>
@@ -242,6 +246,12 @@ function TemplateBrowser({ onSelect }: {
               onPress={() => onSelect(activeCategory, item)}
               activeOpacity={0.7}
             >
+              {hasServiceIcon(item.name)
+                ? <ServiceIcon name={item.name} size={40} />
+                : <View style={[s.tmplItemIcon, { backgroundColor: color + '20' }]}>
+                    <Ionicons name={icon as never} size={18} color={color} />
+                  </View>
+              }
               <View style={{ flex: 1 }}>
                 <Text style={s.tmplItemName}>{item.name}</Text>
                 {item.cycle && <Text style={s.tmplItemMeta}>{CYCLE_LABEL[item.cycle]}</Text>}
