@@ -495,21 +495,51 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
 
   // ── 保険 ──────────────────────────────────────────────────────────────────────
   insurance: [
-    { name: '生命保険',             cycle: 'monthly' },
-    { name: '医療保険',             cycle: 'monthly' },
-    { name: 'がん保険',             cycle: 'monthly' },
-    { name: '就業不能保険',         cycle: 'monthly' },
-    { name: '三大疾病保険',         cycle: 'monthly' },
-    { name: '火災保険',             cycle: 'yearly'  },
-    { name: '地震保険',             cycle: 'yearly'  },
-    { name: '自動車保険',           cycle: 'yearly'  },
-    { name: '自転車保険',           cycle: 'yearly'  },
-    { name: 'ペット保険',           cycle: 'monthly' },
-    { name: '学資保険',             cycle: 'monthly' },
-    { name: '個人年金保険',         cycle: 'monthly' },
-    { name: '介護保険（民間）',     cycle: 'monthly' },
-    { name: 'ドローン保険',         cycle: 'yearly'  },
-    { name: '損害賠償保険',         cycle: 'yearly'  },
+    // ── 生命保険系 ───────────────────────────────────────────────────
+    { name: '生命保険（定期）',         cycle: 'monthly' },
+    { name: '生命保険（終身）',         cycle: 'monthly' },
+    { name: '生命保険（養老）',         cycle: 'monthly' },
+    { name: '収入保障保険',             cycle: 'monthly' },
+    { name: '変額保険',                 cycle: 'monthly' },
+    { name: '外貨建て保険',             cycle: 'monthly' },
+    // ── 医療・健康系 ─────────────────────────────────────────────────
+    { name: '医療保険',                 cycle: 'monthly' },
+    { name: 'がん保険',                 cycle: 'monthly' },
+    { name: '三大疾病保険',             cycle: 'monthly' },
+    { name: '就業不能保険',             cycle: 'monthly' },
+    { name: '所得補償保険',             cycle: 'monthly' },
+    { name: '女性疾病保険',             cycle: 'monthly' },
+    { name: '歯科保険',                 cycle: 'monthly' },
+    { name: '精神疾患・うつ保険',       cycle: 'monthly' },
+    { name: '介護保険（民間）',         cycle: 'monthly' },
+    // ── 子ども・家族向け ─────────────────────────────────────────────
+    { name: '学資保険',                 cycle: 'monthly' },
+    { name: '個人年金保険',             cycle: 'monthly' },
+    { name: 'こども医療保険',           cycle: 'monthly' },
+    { name: 'ペット保険',               cycle: 'monthly' },
+    // ── 損害・賠償系 ─────────────────────────────────────────────────
+    { name: '個人賠償責任保険',         cycle: 'yearly'  },
+    { name: '傷害保険',                 cycle: 'yearly'  },
+    { name: '弁護士費用保険',           cycle: 'monthly' },
+    // ── 住宅・家財系 ─────────────────────────────────────────────────
+    { name: '火災保険',                 cycle: 'yearly'  },
+    { name: '地震保険',                 cycle: 'yearly'  },
+    { name: '家財保険',                 cycle: 'yearly'  },
+    // ── 乗り物系 ────────────────────────────────────────────────────
+    { name: '自動車保険',               cycle: 'yearly'  },
+    { name: '自動車保険（車両保険あり）', cycle: 'yearly' },
+    { name: 'バイク保険',               cycle: 'yearly'  },
+    { name: '自転車保険',               cycle: 'yearly'  },
+    // ── デバイス・その他 ─────────────────────────────────────────────
+    { name: 'スマートフォン保険',       cycle: 'monthly' },
+    { name: '家電延長保証',             cycle: 'yearly'  },
+    { name: 'ドローン保険',             cycle: 'yearly'  },
+    { name: 'スポーツ保険',             cycle: 'yearly'  },
+    { name: '海外旅行保険（年間）',     cycle: 'yearly'  },
+    // ── 事業・専門職向け ─────────────────────────────────────────────
+    { name: '専門職賠償保険（PL保険）', cycle: 'yearly'  },
+    { name: '店舗総合保険',             cycle: 'monthly' },
+    { name: '業務災害補償保険',         cycle: 'monthly' },
   ],
 
   // ── ローン・返済 ──────────────────────────────────────────────────────────────
