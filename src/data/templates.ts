@@ -167,6 +167,93 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'MasterClass（年額）',           amount: 120,   cycle: 'yearly',  currency: 'USD' },
     { name: 'Coursera Plus（月額）',         amount: 59,    cycle: 'monthly', currency: 'USD' },
     { name: 'Coursera Plus（年額）',         amount: 399,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Rosetta Stone（月額）',         amount: 14,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Rosetta Stone（年額）',         amount: 96,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Babbel（月額）',               amount: 14,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Babbel（年額）',               amount: 84,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Skillshare（年額）',            amount: 168,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'LinkedIn Learning（月額）',     amount: 40,    cycle: 'monthly', currency: 'USD' },
+    { name: 'LinkedIn Learning（年額）',     amount: 240,   cycle: 'yearly',  currency: 'USD' },
+
+    // ── 動画（海外・USD）─────────────────────────────────────────────
+    { name: 'Crunchyroll Fan',              amount: 8,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Crunchyroll Mega Fan',         amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Crunchyroll Ultimate Fan',     amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Max（月額）',                  amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Max（年額一括）',              amount: 100,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Paramount+（月額）',           amount: 8,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Paramount+ with SHOWTIME',     amount: 13,    cycle: 'monthly', currency: 'USD' },
+    { name: 'ESPN+（月額）',                amount: 11,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Peacock Premium（月額）',      amount: 8,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Shudder（月額）',              amount: 7,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Mubi（月額）',                 amount: 14,    cycle: 'monthly', currency: 'USD' },
+
+    // ── ゲーム（追加）────────────────────────────────────────────────
+    { name: 'EA Play（月額）',              amount: 530,   cycle: 'monthly' },
+    { name: 'EA Play（年額）',              amount: 3600,  cycle: 'yearly'  },
+    { name: 'EA Play Pro（月額・PC）',      amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Ubisoft+（月額）',             amount: 18,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Google Play Pass',            amount: 600,   cycle: 'monthly' },
+    { name: 'Humble Bundle Choice',        amount: 12,    cycle: 'monthly', currency: 'USD' },
+    { name: 'GeForce NOW Priority',        amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'GeForce NOW Ultimate',        amount: 20,    cycle: 'monthly', currency: 'USD' },
+
+    // ── 音楽（追加・USD）─────────────────────────────────────────────
+    { name: 'SoundCloud Go+',              amount: 10,    cycle: 'monthly', currency: 'USD' },
+
+    // ── デザイン・クリエイティブ（USD）───────────────────────────────
+    { name: 'Canva Pro（月額）',            amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Canva Pro（年額）',            amount: 120,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Sketch（月額）',               amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Sketch（年額）',               amount: 99,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Framer（月額）',               amount: 20,    cycle: 'monthly', currency: 'USD' },
+
+    // ── セキュリティ・パスワード管理（USD）───────────────────────────
+    { name: '1Password 個人（月額）',       amount: 3,     cycle: 'monthly', currency: 'USD' },
+    { name: '1Password 個人（年額）',       amount: 36,    cycle: 'yearly',  currency: 'USD' },
+    { name: '1Password ファミリー（年額）', amount: 60,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'LastPass Premium',            amount: 3,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Bitwarden Premium',           amount: 10,    cycle: 'yearly',  currency: 'USD' },
+
+    // ── コミュニケーション・会議（USD）───────────────────────────────
+    { name: 'Zoom Pro（月額）',             amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Zoom Pro（年額）',             amount: 150,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Slack Pro（月額・1ユーザー）', amount: 8,     cycle: 'monthly', currency: 'USD' },
+
+    // ── コミュニティ・ゲーマー（USD）─────────────────────────────────
+    { name: 'Discord Nitro（月額）',        amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Discord Nitro（年額）',        amount: 100,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Discord Nitro Basic（月額）',  amount: 3,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Twitch Turbo',                amount: 9,     cycle: 'monthly', currency: 'USD' },
+
+    // ── ノート・タスク管理（USD）─────────────────────────────────────
+    { name: 'Evernote Personal（月額）',    amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Evernote Personal（年額）',    amount: 130,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Todoist Pro（月額）',          amount: 5,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Todoist Pro（年額）',          amount: 48,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Obsidian Sync（月額）',        amount: 10,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Obsidian Sync（年額）',        amount: 96,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Bear（年額）',                amount: 30,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Fantastical Premium（年額）',  amount: 40,    cycle: 'yearly',  currency: 'USD' },
+
+    // ── 開発ツール・クラウド（USD）───────────────────────────────────
+    { name: 'GitHub Pro',                  amount: 4,     cycle: 'monthly', currency: 'USD' },
+    { name: 'GitLab Premium（月額）',       amount: 29,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Vercel Pro（月額）',           amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Linear（月額）',               amount: 8,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Jira（月額・1ユーザー）',      amount: 8,     cycle: 'monthly', currency: 'USD' },
+
+    // ── 日本のアプリ・サービス（JPY）─────────────────────────────────
+    { name: 'pixiv Premium（月額）',        amount: 550,   cycle: 'monthly' },
+    { name: 'pixiv Premium（年額）',        amount: 6000,  cycle: 'yearly'  },
+    { name: '楽天プレミアム',               amount: 550,   cycle: 'monthly' },
+    { name: 'LEAN BODY（月額）',            amount: 1628,  cycle: 'monthly' },
+    { name: 'LEAN BODY（年額一括）',        amount: 9800,  cycle: 'yearly'  },
+
+    // ── マンガ・電子書籍（JPY）───────────────────────────────────────
+    { name: 'コミックシーモア 読み放題Lite',  amount: 780,  cycle: 'monthly' },
+    { name: 'コミックシーモア 読み放題フル',  amount: 1480, cycle: 'monthly' },
+    { name: 'BookLive! 読み放題',           amount: 836,   cycle: 'monthly' },
   ],
   telecom: [
     { name: 'docomo',              cycle: 'monthly' },
