@@ -108,11 +108,20 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: '日本経済新聞 デジタル',         amount: 4277,  cycle: 'monthly' },
 
     // ── Adobe ─────────────────────────────────────────────────────────
-    { name: 'Adobe Creative Cloud 個人',     amount: 6480,  cycle: 'monthly' },
-    { name: 'Adobe Photoshop 単体',         amount: 3280,  cycle: 'monthly' },
-    { name: 'Adobe Lightroom',              amount: 1180,  cycle: 'monthly' },
-    { name: 'Adobe Acrobat Pro',            amount: 1518,  cycle: 'monthly' },
-    { name: 'Adobe Express Premium',        amount: 1380,  cycle: 'monthly' },
+    { name: 'Adobe Creative Cloud 個人',          amount: 6480,  cycle: 'monthly' },
+    { name: 'Adobe Creative Cloud 個人（年額）',  amount: 72336, cycle: 'yearly'  },
+    { name: 'Adobe Photoshop 単体',              amount: 3280,  cycle: 'monthly' },
+    { name: 'Adobe Premiere Pro 単体',           amount: 3280,  cycle: 'monthly' },
+    { name: 'Adobe After Effects 単体',          amount: 3280,  cycle: 'monthly' },
+    { name: 'Adobe Illustrator 単体',            amount: 3280,  cycle: 'monthly' },
+    { name: 'Adobe InDesign 単体',              amount: 3280,  cycle: 'monthly' },
+    { name: 'Adobe Premiere Pro + After Effects', amount: 5060, cycle: 'monthly' },
+    { name: 'Adobe Lightroom',                   amount: 1180,  cycle: 'monthly' },
+    { name: 'Adobe Lightroom + Photoshop',       amount: 1880,  cycle: 'monthly' },
+    { name: 'Adobe Acrobat Pro',                 amount: 1518,  cycle: 'monthly' },
+    { name: 'Adobe Express Premium',             amount: 1380,  cycle: 'monthly' },
+    { name: 'Adobe Stock（10点/月）',             amount: 4378,  cycle: 'monthly' },
+    { name: 'Adobe Substance 3D Collection',     amount: 5030,  cycle: 'monthly' },
 
     // ── Microsoft ─────────────────────────────────────────────────────
     { name: 'Microsoft 365 Personal',       amount: 1284,  cycle: 'monthly' },
@@ -235,6 +244,67 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'Obsidian Sync（年額）',        amount: 96,    cycle: 'yearly',  currency: 'USD' },
     { name: 'Bear（年額）',                amount: 30,    cycle: 'yearly',  currency: 'USD' },
     { name: 'Fantastical Premium（年額）',  amount: 40,    cycle: 'yearly',  currency: 'USD' },
+
+    // ── 動画制作・クリエイター向け（USD）────────────────────────────
+    { name: 'Descript Creator（月額）',     amount: 24,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Descript Creator（年額）',     amount: 192,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Descript Pro（月額）',         amount: 40,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Vimeo Plus（年額）',           amount: 84,    cycle: 'yearly',  currency: 'USD' },
+    { name: 'Vimeo Pro（月額）',            amount: 20,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Vimeo Pro（年額）',            amount: 240,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'Vimeo Business（月額）',       amount: 50,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Loom Pro（月額）',             amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Loom Pro（年額）',             amount: 144,   cycle: 'yearly',  currency: 'USD' },
+    { name: 'StreamYard Basic（月額）',     amount: 49,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Riverside.fm Standard（月額）', amount: 15,   cycle: 'monthly', currency: 'USD' },
+
+    // ── 音楽ライセンス・素材（USD）───────────────────────────────────
+    { name: 'Epidemic Sound Personal（月額）', amount: 15, cycle: 'monthly', currency: 'USD' },
+    { name: 'Epidemic Sound Personal（年額）', amount: 99, cycle: 'yearly',  currency: 'USD' },
+    { name: 'Epidemic Sound Commercial（月額）', amount: 49, cycle: 'monthly', currency: 'USD' },
+    { name: 'Artlist Personal（年額）',      amount: 199,  cycle: 'yearly',  currency: 'USD' },
+    { name: 'Artlist Creator（年額）',       amount: 299,  cycle: 'yearly',  currency: 'USD' },
+    { name: 'Musicbed Personal（月額）',     amount: 15,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Splice（月額）',               amount: 8,     cycle: 'monthly', currency: 'USD' },
+    { name: 'Storyblocks All Access（年額）', amount: 180, cycle: 'yearly',  currency: 'USD' },
+    { name: 'Envato Elements（月額）',       amount: 17,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Envato Elements（年額）',       amount: 198,  cycle: 'yearly',  currency: 'USD' },
+    { name: 'Motion Array（月額）',          amount: 30,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Motion Array（年額）',          amount: 120,  cycle: 'yearly',  currency: 'USD' },
+    { name: 'Shutterstock（350点/月）',      amount: 49,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Getty Images（月額）',          amount: 175,  cycle: 'monthly', currency: 'USD' },
+
+    // ── プロジェクト管理・コラボ（USD）───────────────────────────────
+    { name: 'Asana Premium（月額・1ユーザー）', amount: 11, cycle: 'monthly', currency: 'USD' },
+    { name: 'Asana Premium（年額・1ユーザー）', amount: 108, cycle: 'yearly', currency: 'USD' },
+    { name: 'Monday.com Basic（月額・1ユーザー）', amount: 9, cycle: 'monthly', currency: 'USD' },
+    { name: 'ClickUp Unlimited（月額・1ユーザー）', amount: 7, cycle: 'monthly', currency: 'USD' },
+    { name: 'Trello Premium（月額・1ユーザー）', amount: 5, cycle: 'monthly', currency: 'USD' },
+    { name: 'Miro Team（月額・1ユーザー）',  amount: 8,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Basecamp（個人）',             amount: 15,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Notion AI（月額追加）',         amount: 10,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Typeform Plus（月額）',         amount: 25,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Airtable Plus（月額）',         amount: 10,   cycle: 'monthly', currency: 'USD' },
+
+    // ── マーケティング・SEO（USD）────────────────────────────────────
+    { name: 'Buffer Essentials（月額）',     amount: 6,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Hootsuite Professional（月額）', amount: 99,  cycle: 'monthly', currency: 'USD' },
+    { name: 'Mailchimp Essentials（月額）',  amount: 13,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Semrush Pro（月額）',           amount: 140,  cycle: 'monthly', currency: 'USD' },
+    { name: 'Ahrefs Lite（月額）',           amount: 129,  cycle: 'monthly', currency: 'USD' },
+
+    // ── 会計・経理（JPY）─────────────────────────────────────────────
+    { name: 'freee 会計 スターター',         amount: 980,  cycle: 'monthly' },
+    { name: 'freee 会計 スタンダード',       amount: 1980, cycle: 'monthly' },
+    { name: 'freee 会計 プレミアム',         amount: 3980, cycle: 'monthly' },
+    { name: 'マネーフォワード クラウド確定申告 フリー', amount: 990, cycle: 'monthly' },
+    { name: 'マネーフォワード クラウド確定申告 パーソナル', amount: 1650, cycle: 'monthly' },
+    { name: 'マネーフォワード ME プレミアム', amount: 500, cycle: 'monthly' },
+
+    // ── バックアップ・ストレージ（USD）───────────────────────────────
+    { name: 'Backblaze Personal Backup（月額）', amount: 9, cycle: 'monthly', currency: 'USD' },
+    { name: 'Backblaze Personal Backup（年額）', amount: 99, cycle: 'yearly', currency: 'USD' },
+    { name: 'Box Personal Pro（月額）',      amount: 10,   cycle: 'monthly', currency: 'USD' },
 
     // ── 開発ツール・クラウド（USD）───────────────────────────────────
     { name: 'GitHub Pro',                  amount: 4,     cycle: 'monthly', currency: 'USD' },
