@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ExpensesProvider } from './src/context/ExpensesContext';
 import HomeScreen from './src/screens/HomeScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
+import SimulatorScreen from './src/screens/SimulatorScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -36,8 +37,10 @@ export default function App() {
                 let iconName: string;
                 if (route.name === '一覧') {
                   iconName = focused ? 'list' : 'list-outline';
-                } else {
+                } else if (route.name === 'カレンダー') {
                   iconName = focused ? 'calendar' : 'calendar-outline';
+                } else {
+                  iconName = focused ? 'calculator' : 'calculator-outline';
                 }
                 return <Ionicons name={iconName as never} size={size} color={color} />;
               },
@@ -45,6 +48,7 @@ export default function App() {
           >
             <Tab.Screen name="一覧" component={HomeScreen} />
             <Tab.Screen name="カレンダー" component={CalendarScreen} />
+            <Tab.Screen name="シミュレーター" component={SimulatorScreen} />
           </Tab.Navigator>
         </NavigationContainer>
       </ExpensesProvider>
