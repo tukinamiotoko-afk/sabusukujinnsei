@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState } from 'react';
 
 export type Category =
-  | 'subscription' | 'hospital' | 'medicine'
-  | 'haircut' | 'protein' | 'telecom' | 'other';
+  | 'subscription' | 'housing' | 'insurance' | 'telecom'
+  | 'loan' | 'transport' | 'lesson' | 'delivery'
+  | 'membership' | 'social'
+  | 'hospital' | 'medicine' | 'haircut' | 'protein' | 'other';
 
 export type Cycle =
   | 'weekly' | 'monthly' | 'yearly'
@@ -46,13 +48,21 @@ export function useExpenses() {
 // ── 共通ユーティリティ ─────────────────────────────────────────────────────────
 
 export const CAT: Record<Category, { label: string; color: string; icon: string }> = {
-  subscription: { label: 'サブスク',    color: '#6C63FF', icon: 'tv-outline' },
-  hospital:     { label: '病院',        color: '#F56565', icon: 'medical-outline' },
-  medicine:     { label: '薬',          color: '#4299E1', icon: 'flask-outline' },
-  haircut:      { label: '散髪',        color: '#ED64A6', icon: 'cut-outline' },
-  protein:      { label: 'プロテイン',  color: '#F6AD55', icon: 'fitness-outline' },
-  telecom:      { label: '通信費',      color: '#38B2AC', icon: 'phone-portrait-outline' },
-  other:        { label: 'その他',      color: '#A0AEC0', icon: 'apps-outline' },
+  subscription: { label: 'サブスク',       color: '#6C63FF', icon: 'tv-outline' },
+  housing:      { label: '住居費',         color: '#DD6B20', icon: 'home-outline' },
+  insurance:    { label: '保険',           color: '#2B6CB0', icon: 'shield-checkmark-outline' },
+  telecom:      { label: '通信費',         color: '#38B2AC', icon: 'phone-portrait-outline' },
+  loan:         { label: 'ローン・返済',   color: '#C53030', icon: 'trending-down-outline' },
+  transport:    { label: '交通定期',       color: '#0EA5E9', icon: 'train-outline' },
+  lesson:       { label: '習い事・ジム',   color: '#38A169', icon: 'barbell-outline' },
+  delivery:     { label: '定期購入・便',   color: '#805AD5', icon: 'cube-outline' },
+  membership:   { label: '年会費・会費',   color: '#B7791F', icon: 'card-outline' },
+  social:       { label: '社会保険・公共', color: '#4A5568', icon: 'document-text-outline' },
+  hospital:     { label: '病院',           color: '#F56565', icon: 'medical-outline' },
+  medicine:     { label: '薬',             color: '#4299E1', icon: 'flask-outline' },
+  haircut:      { label: '散髪',           color: '#ED64A6', icon: 'cut-outline' },
+  protein:      { label: 'プロテイン',     color: '#F6AD55', icon: 'fitness-outline' },
+  other:        { label: 'その他',         color: '#A0AEC0', icon: 'apps-outline' },
 };
 
 export const CYCLE_LABEL: Record<Cycle, string> = {
