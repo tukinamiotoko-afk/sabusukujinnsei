@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,11 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  Animated,
+  Dimensions,
 } from 'react-native';
+
+const SCREEN_W = Dimensions.get('window').width;
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -387,16 +391,16 @@ function TemplateBrowser({ onSelect }: {
 
 // ─── カスタムフォーム ─────────────────────────────────────────────────────────
 
-function CustomForm({ form, setForm, showDate, setShowDate }: {
+function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel }: {
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   showDate: boolean;
   setShowDate: (v: boolean) => void;
+  onOpenCatPanel: () => void;
 }) {
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm(f => ({ ...f, [key]: val }));
 
-  const [catOpen, setCatOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [dayInput, setDayInput] = useState('');
 
@@ -464,44 +468,23 @@ function CustomForm({ form, setForm, showDate, setShowDate }: {
           <Text style={s.fieldLabel}>カテゴリ</Text>
           <TouchableOpacity
             style={s.dropdownTrigger}
-            onPress={() => setCatOpen(o => !o)}
+            onPress={onOpenCatPanel}
             activeOpacity={0.75}
           >
             <View style={[s.dropdownTriggerIcon, { backgroundColor: catColor + '20' }]}>
               <Ionicons name={catIcon as never} size={15} color={catColor} />
             </View>
             <Text style={[s.dropdownTriggerText, { color: catColor }]}>{catLabel}</Text>
-            <Ionicons name={catOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#A0AEC0" />
+            <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
           </TouchableOpacity>
-          {catOpen && (
-            <View style={s.dropdownPanel}>
-              {CATEGORIES.map(cat => {
-                const { label: l, color: c, icon: ic } = CAT[cat];
-                const sel = cat === form.category;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[s.dropdownRow, sel && { backgroundColor: c + '10' }]}
-                    onPress={() => { set('category', cat); setCatOpen(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[s.dropdownRowIcon, { backgroundColor: c + '20' }]}>
-                      <Ionicons name={ic as never} size={15} color={c} />
-                    </View>
-                    <Text style={[s.dropdownRowText, sel && { color: c, fontWeight: '700' }]}>{l}</Text>
-                    {sel && <Ionicons name="checkmark" size={16} color={c} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
         </View>
 
-        {/* 支払日 */}
+        {/* 支払日または支払周期 */}
         <View style={s.fieldWrap}>
-          <Text style={s.fieldLabel}>支払日</Text>
+          <Text style={s.fieldLabel}>支払日または支払周期</Text>
           {payOpen && (
             <View style={s.dayPanel}>
+              <Text style={s.dayPanelSection}>毎月払いの場合</Text>
               <View style={s.dayRow}>
                 <Text style={s.dayRowLabel}>毎月</Text>
                 <TextInput
@@ -512,10 +495,27 @@ function CustomForm({ form, setForm, showDate, setShowDate }: {
                   placeholderTextColor="#CBD5E0"
                   keyboardType="number-pad"
                   maxLength={2}
-                  autoFocus
                 />
                 <Text style={s.dayRowLabel}>日払い</Text>
               </View>
+              <View style={s.dayPanelDivider} />
+              <Text style={s.dayPanelSection}>支払周期</Text>
+              {CYCLES.map(cycle => {
+                const sel = form.cycle === cycle;
+                return (
+                  <TouchableOpacity
+                    key={cycle}
+                    style={[s.cycleRow, sel && s.cycleRowSelected]}
+                    onPress={() => { set('cycle', cycle); setPayOpen(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>
+                      {CYCLE_LABEL[cycle]}
+                    </Text>
+                    {sel && <Ionicons name="checkmark" size={16} color="#6C63FF" />}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
           <TouchableOpacity
@@ -609,9 +609,21 @@ function ExpenseModal({
 }) {
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [showDate, setShowDate] = useState(false);
+  const [catPanel, setCatPanel] = useState(false);
+  const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;
+
+  const openCatPanel = () => {
+    setCatPanel(true);
+    Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+  };
+
+  const closeCatPanel = () => {
+    Animated.timing(slideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
+      .start(() => setCatPanel(false));
+  };
 
   const handleTemplateSelect = (cat: Category, item: TemplateItem) => {
     setForm(f => ({
@@ -678,10 +690,52 @@ function ExpenseModal({
                 setForm={setForm}
                 showDate={showDate}
                 setShowDate={setShowDate}
+                onOpenCatPanel={openCatPanel}
               />
             )}
           </View>
         </View>
+
+        {/* カテゴリスライドパネル */}
+        {catPanel && (
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: '#F5F6FA', transform: [{ translateX: slideAnim }] },
+            ]}
+          >
+            <View style={s.catPanelHeader}>
+              <TouchableOpacity style={s.catPanelBackBtn} onPress={closeCatPanel} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={22} color="#6C63FF" />
+              </TouchableOpacity>
+              <Text style={s.catPanelTitle}>カテゴリを選択</Text>
+              <View style={{ width: 44 }} />
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {CATEGORIES.map(cat => {
+                const { label, color, icon } = CAT[cat];
+                const sel = form.category === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[s.catPanelRow, sel && s.catPanelRowSelected]}
+                    onPress={() => {
+                      setForm(f => ({ ...f, category: cat }));
+                      closeCatPanel();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[s.catPanelRowIcon, { backgroundColor: color + '20' }]}>
+                      <Ionicons name={icon as never} size={18} color={color} />
+                    </View>
+                    <Text style={[s.catPanelRowText, sel && s.catPanelRowTextSel]}>{label}</Text>
+                    {sel && <Ionicons name="checkmark" size={18} color="#6C63FF" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
+        )}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -968,16 +1022,28 @@ const s = StyleSheet.create({
   dropdownTrigger:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingHorizontal: 14, paddingVertical: 13, gap: 10 },
   dropdownTriggerIcon:{ width: 26, height: 26, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   dropdownTriggerText:{ flex: 1, fontSize: 16, color: '#1A202C' },
-  dropdownPanel:      { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', marginTop: 6, overflow: 'hidden' },
-  dropdownRow:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', gap: 10 },
-  dropdownRowIcon:    { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  dropdownRowText:    { flex: 1, fontSize: 15, color: '#1A202C', fontWeight: '500' },
+
+  // カテゴリスライドパネル
+  catPanelHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
+  catPanelBackBtn:      { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  catPanelTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
+  catPanelRow:          { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', gap: 14 },
+  catPanelRowSelected:  { backgroundColor: '#EEF2FF' },
+  catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
+  catPanelRowTextSel:   { color: '#6C63FF', fontWeight: '700' },
 
   // 支払日パネル
   dayPanel:           { backgroundColor: '#EEF2FF', borderRadius: 12, padding: 14, marginBottom: 6 },
+  dayPanelSection:    { fontSize: 12, fontWeight: '700', color: '#718096', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  dayPanelDivider:    { height: 1, backgroundColor: '#C7D2FE', marginVertical: 12 },
   dayRow:             { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dayRowLabel:        { fontSize: 16, fontWeight: '600', color: '#4A5568' },
   dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#6C63FF', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
+  cycleRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderRadius: 8, gap: 8 },
+  cycleRowSelected:   { backgroundColor: 'rgba(108,99,255,0.08)' },
+  cycleRowText:       { flex: 1, fontSize: 15, color: '#4A5568', fontWeight: '500' },
+  cycleRowTextSel:    { color: '#6C63FF', fontWeight: '700' },
 
   dateSelector:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dateSelectorText:  { fontSize: 16, color: '#1A202C' },
