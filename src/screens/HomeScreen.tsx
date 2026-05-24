@@ -391,38 +391,16 @@ function TemplateBrowser({ onSelect }: {
 
 // ─── カスタムフォーム ─────────────────────────────────────────────────────────
 
-function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel }: {
+function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOpenPayPanel }: {
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   showDate: boolean;
   setShowDate: (v: boolean) => void;
   onOpenCatPanel: () => void;
+  onOpenPayPanel: () => void;
 }) {
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm(f => ({ ...f, [key]: val }));
-
-  const [payOpen, setPayOpen] = useState(false);
-  const [dayInput, setDayInput] = useState('');
-
-  const handleTogglePay = () => {
-    if (!payOpen && form.cycle === 'monthly') {
-      setDayInput(String(form.nextDate.getDate()));
-    }
-    setPayOpen(o => !o);
-  };
-
-  const handleDay = (v: string) => {
-    const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
-    setDayInput(clean);
-    const n = parseInt(clean, 10);
-    if (n >= 1 && n <= 31) {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      let y = today.getFullYear(), m = today.getMonth();
-      const candidate = new Date(y, m, n);
-      if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
-      setForm(f => ({ ...f, cycle: 'monthly', nextDate: new Date(y, m, n) }));
-    }
-  };
 
   const { label: catLabel, color: catColor, icon: catIcon } = CAT[form.category];
   const payDisplay = form.cycle === 'monthly'
@@ -482,71 +460,16 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel }: {
         {/* 支払日または支払周期 */}
         <View style={s.fieldWrap}>
           <Text style={s.fieldLabel}>支払日または支払周期</Text>
-          {payOpen && (
-            <View style={s.dayPanel}>
-              <Text style={s.dayPanelSection}>毎月払いの場合</Text>
-              <View style={s.dayRow}>
-                <Text style={s.dayRowLabel}>毎月</Text>
-                <TextInput
-                  style={s.dayNumInput}
-                  value={dayInput}
-                  onChangeText={handleDay}
-                  placeholder="15"
-                  placeholderTextColor="#CBD5E0"
-                  keyboardType="number-pad"
-                  maxLength={2}
-                />
-                <Text style={s.dayRowLabel}>日払い</Text>
-              </View>
-              <View style={s.dayPanelDivider} />
-              <Text style={s.dayPanelSection}>支払周期</Text>
-              {CYCLES.map(cycle => {
-                const sel = form.cycle === cycle;
-                return (
-                  <TouchableOpacity
-                    key={cycle}
-                    style={[s.cycleRow, sel && s.cycleRowSelected]}
-                    onPress={() => { set('cycle', cycle); setPayOpen(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>
-                      {CYCLE_LABEL[cycle]}
-                    </Text>
-                    {sel && <Ionicons name="checkmark" size={16} color="#6C63FF" />}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
           <TouchableOpacity
             style={s.dropdownTrigger}
-            onPress={handleTogglePay}
+            onPress={onOpenPayPanel}
             activeOpacity={0.75}
           >
             <Ionicons name="calendar-outline" size={15} color="#6C63FF" />
             <Text style={s.dropdownTriggerText}>{payDisplay}</Text>
-            <Ionicons name={payOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#A0AEC0" />
+            <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
           </TouchableOpacity>
         </View>
-
-        {/* カスタム日数 */}
-        {form.cycle === 'custom' && (
-          <View style={s.fieldWrap}>
-            <Text style={s.fieldLabel}>間隔（日数） <Text style={s.required}>*</Text></Text>
-            <View style={s.amountRow}>
-              <TextInput
-                style={[s.textInput, { flex: 1, borderWidth: 0 }]}
-                value={form.customCycleDays}
-                onChangeText={v => set('customCycleDays', v.replace(/[^0-9]/g, ''))}
-                placeholder="例: 10、60、90"
-                placeholderTextColor="#CBD5E0"
-                keyboardType="number-pad"
-                returnKeyType="done"
-              />
-              <Text style={[s.yenSign, { paddingRight: 14 }]}>日ごと</Text>
-            </View>
-          </View>
-        )}
 
         {/* 次回支払日 */}
         <View style={s.fieldWrap}>
@@ -610,7 +533,10 @@ function ExpenseModal({
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [showDate, setShowDate] = useState(false);
   const [catPanel, setCatPanel] = useState(false);
+  const [payPanel, setPayPanel] = useState(false);
+  const [dayInput, setDayInput] = useState('');
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
+  const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;
@@ -623,6 +549,30 @@ function ExpenseModal({
   const closeCatPanel = () => {
     Animated.timing(slideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
       .start(() => setCatPanel(false));
+  };
+
+  const openPayPanel = () => {
+    if (form.cycle === 'monthly') setDayInput(String(form.nextDate.getDate()));
+    setPayPanel(true);
+    Animated.timing(paySlideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+  };
+
+  const closePayPanel = () => {
+    Animated.timing(paySlideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
+      .start(() => setPayPanel(false));
+  };
+
+  const handleDay = (v: string) => {
+    const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
+    setDayInput(clean);
+    const n = parseInt(clean, 10);
+    if (n >= 1 && n <= 31) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      let y = today.getFullYear(), m = today.getMonth();
+      const candidate = new Date(y, m, n);
+      if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
+      setForm(f => ({ ...f, cycle: 'monthly', nextDate: new Date(y, m, n) }));
+    }
   };
 
   const handleTemplateSelect = (cat: Category, item: TemplateItem) => {
@@ -691,6 +641,7 @@ function ExpenseModal({
                 showDate={showDate}
                 setShowDate={setShowDate}
                 onOpenCatPanel={openCatPanel}
+                onOpenPayPanel={openPayPanel}
               />
             )}
           </View>
@@ -733,6 +684,90 @@ function ExpenseModal({
                   </TouchableOpacity>
                 );
               })}
+            </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* 支払スライドパネル */}
+        {payPanel && (
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: '#F5F6FA', transform: [{ translateX: paySlideAnim }] },
+            ]}
+          >
+            <View style={s.catPanelHeader}>
+              <TouchableOpacity style={s.catPanelBackBtn} onPress={closePayPanel} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={22} color="#6C63FF" />
+              </TouchableOpacity>
+              <Text style={s.catPanelTitle}>支払日または支払周期</Text>
+              <View style={{ width: 44 }} />
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.payPanelContent}>
+
+              {/* 毎月払いの場合 */}
+              <Text style={s.dayPanelSection}>毎月払いの場合</Text>
+              <View style={s.dayPanel}>
+                <View style={s.dayRow}>
+                  <Text style={s.dayRowLabel}>毎月</Text>
+                  <TextInput
+                    style={s.dayNumInput}
+                    value={dayInput}
+                    onChangeText={handleDay}
+                    placeholder="15"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <Text style={s.dayRowLabel}>日払い</Text>
+                </View>
+              </View>
+
+              {/* 手入力 */}
+              <Text style={[s.dayPanelSection, { marginTop: 16 }]}>カスタム間隔（手入力）</Text>
+              <View style={s.dayPanel}>
+                <View style={s.dayRow}>
+                  <TextInput
+                    style={[s.dayNumInput, { width: 100 }]}
+                    value={form.customCycleDays}
+                    onChangeText={v => setForm(f => ({
+                      ...f,
+                      customCycleDays: v.replace(/[^0-9]/g, ''),
+                      cycle: 'custom',
+                    }))}
+                    placeholder="30"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                  />
+                  <Text style={s.dayRowLabel}>日ごと</Text>
+                </View>
+              </View>
+
+              <View style={s.dayPanelDivider} />
+
+              {/* 支払周期プリセット */}
+              <Text style={s.dayPanelSection}>支払周期</Text>
+              <View style={s.payPanelCycleList}>
+                {CYCLES.map(cycle => {
+                  const sel = form.cycle === cycle;
+                  return (
+                    <TouchableOpacity
+                      key={cycle}
+                      style={[s.cycleRow, sel && s.cycleRowSelected]}
+                      onPress={() => {
+                        setForm(f => ({ ...f, cycle }));
+                        closePayPanel();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>
+                        {CYCLE_LABEL[cycle]}
+                      </Text>
+                      {sel && <Ionicons name="checkmark" size={16} color="#6C63FF" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </ScrollView>
           </Animated.View>
         )}
@@ -1032,6 +1067,10 @@ const s = StyleSheet.create({
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
   catPanelRowTextSel:   { color: '#6C63FF', fontWeight: '700' },
+
+  // 支払スライドパネル
+  payPanelContent:    { padding: 16, paddingBottom: 40 },
+  payPanelCycleList:  { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#EDF2F7' },
 
   // 支払日パネル
   dayPanel:           { backgroundColor: '#EEF2FF', borderRadius: 12, padding: 14, marginBottom: 6 },
