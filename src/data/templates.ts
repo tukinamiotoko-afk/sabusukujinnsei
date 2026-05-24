@@ -32,9 +32,9 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'YouTube Music（個人）',     planName: '個人',       group: 'YouTube Music',   amount: 980,  cycle: 'monthly' },
     { name: 'YouTube Music（ファミリー）', planName: 'ファミリー', group: 'YouTube Music',   amount: 1480, cycle: 'monthly' },
     { name: 'YouTube Music（学生）',     planName: '学生',       group: 'YouTube Music',   amount: 580,  cycle: 'monthly' },
-    { name: 'Google One（100GB）',  planName: '100GB', group: 'Google One', amount: 250,  cycle: 'monthly' },
-    { name: 'Google One（200GB）',  planName: '200GB', group: 'Google One', amount: 380,  cycle: 'monthly' },
-    { name: 'Google One（2TB）',    planName: '2TB',   group: 'Google One', amount: 1300, cycle: 'monthly' },
+    { name: 'Google One（100GB）',  planName: '100GB', group: 'Google One', amount: 250,  yearlyAmount: 2600,  cycle: 'monthly' },
+    { name: 'Google One（200GB）',  planName: '200GB', group: 'Google One', amount: 380,  yearlyAmount: 3800,  cycle: 'monthly' },
+    { name: 'Google One（2TB）',    planName: '2TB',   group: 'Google One', amount: 1300, yearlyAmount: 13000, cycle: 'monthly' },
 
     // ── Apple ─────────────────────────────────────────────────────────
     { name: 'Apple Music（個人）',   planName: '個人',       group: 'Apple Music', amount: 1080, cycle: 'monthly' },
@@ -78,7 +78,7 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'DAZN Standard',               amount: 4200, yearlyAmount: 32000, cycle: 'monthly' },
 
     // ── 音楽（国内）──────────────────────────────────────────────────
-    { name: 'LINE MUSIC（個人）',   planName: '個人',       group: 'LINE MUSIC', amount: 980,  cycle: 'monthly' },
+    { name: 'LINE MUSIC（個人）',   planName: '個人',       group: 'LINE MUSIC', amount: 980,  yearlyAmount: 9800, cycle: 'monthly' },
     { name: 'LINE MUSIC（ファミリー）', planName: 'ファミリー', group: 'LINE MUSIC', amount: 1480, cycle: 'monthly' },
     { name: 'LINE MUSIC（学生）',   planName: '学生',       group: 'LINE MUSIC', amount: 480,  cycle: 'monthly' },
     { name: 'AWA Standard', planName: 'Standard', group: 'AWA', amount: 960, cycle: 'monthly' },
@@ -86,9 +86,9 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'Rakuten Music',        amount: 578,  cycle: 'monthly' },
 
     // ── 音楽（海外・USD）─────────────────────────────────────────────
-    { name: 'Tidal（Individual）', planName: 'Individual', group: 'Tidal', amount: 11, cycle: 'monthly', currency: 'USD' },
-    { name: 'Tidal（HiFi Plus）',  planName: 'HiFi Plus',  group: 'Tidal', amount: 20, cycle: 'monthly', currency: 'USD' },
-    { name: 'Deezer Premium',      amount: 11, cycle: 'monthly', currency: 'USD' },
+    { name: 'Tidal（Individual）', planName: 'Individual', group: 'Tidal', amount: 11, yearlyAmount: 100, cycle: 'monthly', currency: 'USD' },
+    { name: 'Tidal（HiFi Plus）',  planName: 'HiFi Plus',  group: 'Tidal', amount: 20, yearlyAmount: 200, cycle: 'monthly', currency: 'USD' },
+    { name: 'Deezer Premium',      amount: 11, yearlyAmount: 100, cycle: 'monthly', currency: 'USD' },
 
     // ── ゲーム ────────────────────────────────────────────────────────
     { name: 'PlayStation Plus Essential', planName: 'Essential', group: 'PlayStation Plus', amount: 850,  yearlyAmount: 5143,  cycle: 'monthly' },
@@ -156,10 +156,10 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'Grok（X Premium付き）', amount: 980, cycle: 'monthly' },
 
     // ── AI 画像生成 ───────────────────────────────────────────────────
-    { name: 'Midjourney Basic',    planName: 'Basic',    group: 'Midjourney', amount: 10,  cycle: 'monthly', currency: 'USD' },
-    { name: 'Midjourney Standard', planName: 'Standard', group: 'Midjourney', amount: 30,  cycle: 'monthly', currency: 'USD' },
-    { name: 'Midjourney Pro',      planName: 'Pro',      group: 'Midjourney', amount: 60,  cycle: 'monthly', currency: 'USD' },
-    { name: 'Midjourney Mega',     planName: 'Mega',     group: 'Midjourney', amount: 120, cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Basic',    planName: 'Basic',    group: 'Midjourney', amount: 10,  yearlyAmount: 96,   cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Standard', planName: 'Standard', group: 'Midjourney', amount: 30,  yearlyAmount: 288,  cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Pro',      planName: 'Pro',      group: 'Midjourney', amount: 60,  yearlyAmount: 576,  cycle: 'monthly', currency: 'USD' },
+    { name: 'Midjourney Mega',     planName: 'Mega',     group: 'Midjourney', amount: 120, yearlyAmount: 1152, cycle: 'monthly', currency: 'USD' },
     { name: 'Leonardo AI Apprentice', planName: 'Apprentice', group: 'Leonardo AI', amount: 10, cycle: 'monthly', currency: 'USD' },
     { name: 'Leonardo AI Artisan',    planName: 'Artisan',    group: 'Leonardo AI', amount: 24, cycle: 'monthly', currency: 'USD' },
     { name: 'Leonardo AI Maestro',    planName: 'Maestro',    group: 'Leonardo AI', amount: 48, cycle: 'monthly', currency: 'USD' },
@@ -213,8 +213,8 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'Meshy AI Pro',     amount: 20, cycle: 'monthly', currency: 'USD' },
     { name: 'Luma AI Standard', amount: 30, cycle: 'monthly', currency: 'USD' },
     { name: 'D-ID Lite',        amount: 6,  cycle: 'monthly', currency: 'USD' },
-    { name: 'Runway Gen-3 Standard', planName: 'Standard', group: 'Runway Gen-3', amount: 15, cycle: 'monthly', currency: 'USD' },
-    { name: 'Runway Gen-3 Pro',      planName: 'Pro',      group: 'Runway Gen-3', amount: 35, cycle: 'monthly', currency: 'USD' },
+    { name: 'Runway Gen-3 Standard', planName: 'Standard', group: 'Runway Gen-3', amount: 15, yearlyAmount: 144, cycle: 'monthly', currency: 'USD' },
+    { name: 'Runway Gen-3 Pro',      planName: 'Pro',      group: 'Runway Gen-3', amount: 35, yearlyAmount: 336, cycle: 'monthly', currency: 'USD' },
     { name: 'HeyGen',     amount: 29, yearlyAmount: 228, cycle: 'monthly', currency: 'USD' },
     { name: 'Synthesia Starter', amount: 30, cycle: 'monthly', currency: 'USD' },
     { name: 'Kling AI',   amount: 10, cycle: 'monthly', currency: 'USD' },
@@ -271,10 +271,10 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'Mullvad VPN',      amount: 6,  cycle: 'monthly', currency: 'USD' },
 
     // ── SNS・コミュニティ ─────────────────────────────────────────────
-    { name: 'X Premium（Web）',      planName: 'Web',          group: 'X Premium', amount: 980,  cycle: 'monthly' },
+    { name: 'X Premium（Web）',      planName: 'Web',          group: 'X Premium', amount: 980,  yearlyAmount: 9600, cycle: 'monthly' },
     { name: 'X Premium（iOS/Android）', planName: 'iOS/Android', group: 'X Premium', amount: 1380, cycle: 'monthly' },
     { name: 'X Premium+（Web）',     planName: 'Premium+',     group: 'X Premium', amount: 2980, cycle: 'monthly' },
-    { name: 'Reddit Premium',        amount: 6,    cycle: 'monthly', currency: 'USD' },
+    { name: 'Reddit Premium',        amount: 6,    yearlyAmount: 50, cycle: 'monthly', currency: 'USD' },
     { name: 'LinkedIn Premium Career', amount: 40, cycle: 'monthly', currency: 'USD' },
     { name: 'Twitch Turbo',          amount: 9,    cycle: 'monthly', currency: 'USD' },
     { name: 'Discord Nitro',      planName: 'Nitro',       group: 'Discord', amount: 10, yearlyAmount: 100, cycle: 'monthly', currency: 'USD' },
@@ -295,9 +295,9 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'LinkedIn Learning', amount: 40, yearlyAmount: 240, cycle: 'monthly', currency: 'USD' },
 
     // ── 動画（海外・USD）─────────────────────────────────────────────
-    { name: 'Crunchyroll Fan',          planName: 'Fan',          group: 'Crunchyroll', amount: 8,  cycle: 'monthly', currency: 'USD' },
-    { name: 'Crunchyroll Mega Fan',     planName: 'Mega Fan',     group: 'Crunchyroll', amount: 10, cycle: 'monthly', currency: 'USD' },
-    { name: 'Crunchyroll Ultimate Fan', planName: 'Ultimate Fan', group: 'Crunchyroll', amount: 15, cycle: 'monthly', currency: 'USD' },
+    { name: 'Crunchyroll Fan',          planName: 'Fan',          group: 'Crunchyroll', amount: 8,  yearlyAmount: 80,  cycle: 'monthly', currency: 'USD' },
+    { name: 'Crunchyroll Mega Fan',     planName: 'Mega Fan',     group: 'Crunchyroll', amount: 10, yearlyAmount: 100, cycle: 'monthly', currency: 'USD' },
+    { name: 'Crunchyroll Ultimate Fan', planName: 'Ultimate Fan', group: 'Crunchyroll', amount: 15, yearlyAmount: 150, cycle: 'monthly', currency: 'USD' },
     { name: 'HIDIVE',                   amount: 5,   cycle: 'monthly', currency: 'USD' },
     { name: 'Max',                      amount: 10,  yearlyAmount: 100, cycle: 'monthly', currency: 'USD' },
     { name: 'Paramount+',               amount: 8,   cycle: 'monthly', currency: 'USD' },
@@ -314,7 +314,7 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     // ── プロジェクト管理・コラボ（USD）───────────────────────────────
     { name: 'Asana Premium',     amount: 11,  cycle: 'monthly', currency: 'USD' },
     { name: 'Monday.com Basic',  amount: 9,   cycle: 'monthly', currency: 'USD' },
-    { name: 'ClickUp Unlimited', amount: 7,   cycle: 'monthly', currency: 'USD' },
+    { name: 'ClickUp Unlimited', amount: 7,   yearlyAmount: 60, cycle: 'monthly', currency: 'USD' },
     { name: 'Trello Premium',    amount: 5,   cycle: 'monthly', currency: 'USD' },
     { name: 'Miro Team',         amount: 8,   cycle: 'monthly', currency: 'USD' },
     { name: 'Basecamp',          amount: 15,  cycle: 'monthly', currency: 'USD' },
