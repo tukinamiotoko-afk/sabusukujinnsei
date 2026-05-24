@@ -106,35 +106,6 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
   );
 }
 
-// ─── ChipPicker ──────────────────────────────────────────────────────────────
-
-function ChipPicker<T extends string>({
-  label, options, value, onChange, getLabel, getColor,
-}: {
-  label: string; options: T[]; value: T; onChange: (v: T) => void;
-  getLabel: (v: T) => string; getColor?: (v: T) => string;
-}) {
-  return (
-    <View style={s.fieldWrap}>
-      <Text style={s.fieldLabel}>{label}</Text>
-      <View style={s.chipGrid}>
-        {options.map(opt => {
-          const selected = opt === value;
-          const color = getColor ? getColor(opt) : '#6C63FF';
-          return (
-            <TouchableOpacity
-              key={opt}
-              style={[s.chip, selected && { backgroundColor: color, borderColor: color }]}
-              onPress={() => onChange(opt)}
-            >
-              <Text style={[s.chipText, selected && s.chipTextSelected]}>{getLabel(opt)}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
 
 // ─── テンプレートブラウザ ─────────────────────────────────────────────────────
 
@@ -425,6 +396,35 @@ function CustomForm({ form, setForm, showDate, setShowDate }: {
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm(f => ({ ...f, [key]: val }));
 
+  const [catOpen, setCatOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [dayInput, setDayInput] = useState('');
+
+  const handleTogglePay = () => {
+    if (!payOpen && form.cycle === 'monthly') {
+      setDayInput(String(form.nextDate.getDate()));
+    }
+    setPayOpen(o => !o);
+  };
+
+  const handleDay = (v: string) => {
+    const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
+    setDayInput(clean);
+    const n = parseInt(clean, 10);
+    if (n >= 1 && n <= 31) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      let y = today.getFullYear(), m = today.getMonth();
+      const candidate = new Date(y, m, n);
+      if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
+      setForm(f => ({ ...f, cycle: 'monthly', nextDate: new Date(y, m, n) }));
+    }
+  };
+
+  const { label: catLabel, color: catColor, icon: catIcon } = CAT[form.category];
+  const payDisplay = form.cycle === 'monthly'
+    ? `毎月${form.nextDate.getDate()}日`
+    : cycleDisplay(form.cycle, form.customCycleDays ? parseInt(form.customCycleDays, 10) : undefined);
+
   return (
     <ScrollView keyboardShouldPersistTaps="handled">
       <View style={s.modalBody}>
@@ -460,23 +460,74 @@ function CustomForm({ form, setForm, showDate, setShowDate }: {
         </View>
 
         {/* カテゴリ */}
-        <ChipPicker
-          label="カテゴリ"
-          options={CATEGORIES}
-          value={form.category}
-          onChange={v => set('category', v)}
-          getLabel={v => CAT[v].label}
-          getColor={v => CAT[v].color}
-        />
+        <View style={s.fieldWrap}>
+          <Text style={s.fieldLabel}>カテゴリ</Text>
+          <TouchableOpacity
+            style={s.dropdownTrigger}
+            onPress={() => setCatOpen(o => !o)}
+            activeOpacity={0.75}
+          >
+            <View style={[s.dropdownTriggerIcon, { backgroundColor: catColor + '20' }]}>
+              <Ionicons name={catIcon as never} size={15} color={catColor} />
+            </View>
+            <Text style={[s.dropdownTriggerText, { color: catColor }]}>{catLabel}</Text>
+            <Ionicons name={catOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#A0AEC0" />
+          </TouchableOpacity>
+          {catOpen && (
+            <View style={s.dropdownPanel}>
+              {CATEGORIES.map(cat => {
+                const { label: l, color: c, icon: ic } = CAT[cat];
+                const sel = cat === form.category;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[s.dropdownRow, sel && { backgroundColor: c + '10' }]}
+                    onPress={() => { set('category', cat); setCatOpen(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[s.dropdownRowIcon, { backgroundColor: c + '20' }]}>
+                      <Ionicons name={ic as never} size={15} color={c} />
+                    </View>
+                    <Text style={[s.dropdownRowText, sel && { color: c, fontWeight: '700' }]}>{l}</Text>
+                    {sel && <Ionicons name="checkmark" size={16} color={c} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
-        {/* 支払周期 */}
-        <ChipPicker
-          label="支払周期"
-          options={CYCLES}
-          value={form.cycle}
-          onChange={v => set('cycle', v)}
-          getLabel={v => CYCLE_LABEL[v]}
-        />
+        {/* 支払日 */}
+        <View style={s.fieldWrap}>
+          <Text style={s.fieldLabel}>支払日</Text>
+          {payOpen && (
+            <View style={s.dayPanel}>
+              <View style={s.dayRow}>
+                <Text style={s.dayRowLabel}>毎月</Text>
+                <TextInput
+                  style={s.dayNumInput}
+                  value={dayInput}
+                  onChangeText={handleDay}
+                  placeholder="15"
+                  placeholderTextColor="#CBD5E0"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  autoFocus
+                />
+                <Text style={s.dayRowLabel}>日払い</Text>
+              </View>
+            </View>
+          )}
+          <TouchableOpacity
+            style={s.dropdownTrigger}
+            onPress={handleTogglePay}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="calendar-outline" size={15} color="#6C63FF" />
+            <Text style={s.dropdownTriggerText}>{payDisplay}</Text>
+            <Ionicons name={payOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#A0AEC0" />
+          </TouchableOpacity>
+        </View>
 
         {/* カスタム日数 */}
         {form.cycle === 'custom' && (
@@ -913,10 +964,21 @@ const s = StyleSheet.create({
   amountRow:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingLeft: 14 },
   yenSign:           { fontSize: 18, color: '#718096', fontWeight: '600' },
   memoInput:         { minHeight: 80, paddingTop: 13 },
-  chipGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip:              { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#E2E8F0', backgroundColor: '#fff' },
-  chipText:          { fontSize: 13, color: '#718096', fontWeight: '600' },
-  chipTextSelected:  { color: '#fff' },
+  // カテゴリドロップダウン
+  dropdownTrigger:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingHorizontal: 14, paddingVertical: 13, gap: 10 },
+  dropdownTriggerIcon:{ width: 26, height: 26, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  dropdownTriggerText:{ flex: 1, fontSize: 16, color: '#1A202C' },
+  dropdownPanel:      { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', marginTop: 6, overflow: 'hidden' },
+  dropdownRow:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', gap: 10 },
+  dropdownRowIcon:    { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  dropdownRowText:    { flex: 1, fontSize: 15, color: '#1A202C', fontWeight: '500' },
+
+  // 支払日パネル
+  dayPanel:           { backgroundColor: '#EEF2FF', borderRadius: 12, padding: 14, marginBottom: 6 },
+  dayRow:             { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dayRowLabel:        { fontSize: 16, fontWeight: '600', color: '#4A5568' },
+  dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#6C63FF', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
+
   dateSelector:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dateSelectorText:  { fontSize: 16, color: '#1A202C' },
   dateConfirm:       { alignItems: 'flex-end', paddingRight: 4, paddingVertical: 8, marginTop: -8, marginBottom: 8 },
