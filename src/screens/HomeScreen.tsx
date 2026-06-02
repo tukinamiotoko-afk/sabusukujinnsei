@@ -36,7 +36,7 @@ import {
   type Cycle,
   type Expense,
 } from '../context/ExpensesContext';
-import { TEMPLATES, SUBSCRIPTION_SUBCATS, type TemplateItem } from '../data/templates';
+import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, type TemplateItem } from '../data/templates';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
@@ -107,10 +107,16 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
         {expense.memo ? <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text> : null}
         <TouchableOpacity
           style={s.cancelBtn}
-          onPress={() => Linking.openURL(`https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`)}
+          onPress={() => {
+            const url = getCancelUrl(expense.name)
+              ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
+            Linking.openURL(url);
+          }}
           hitSlop={4}
         >
-          <Text style={s.cancelBtnText}>退会方法を調べる</Text>
+          <Text style={s.cancelBtnText}>
+            {getCancelUrl(expense.name) ? '公式退会ページ' : '退会方法を調べる'}
+          </Text>
           <Ionicons name="open-outline" size={11} color="#A0AEC0" />
         </TouchableOpacity>
       </View>

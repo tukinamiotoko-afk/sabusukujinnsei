@@ -28,6 +28,70 @@ export const SUBSCRIPTION_SUBCATS: Record<string, SubcatConfig> = {
   other:         { label: 'その他',       icon: 'apps-outline',             color: '#718096' },
 };
 
+const CANCEL_URL_MAP: [string, string][] = [
+  // 動画
+  ['Netflix',          'https://www.netflix.com/cancelplan'],
+  ['Amazon Prime',     'https://www.amazon.co.jp/gp/primecentral'],
+  ['Amazon Music',     'https://www.amazon.co.jp/music/unlimited/account'],
+  ['Kindle Unlimited', 'https://www.amazon.co.jp/kindle-dbs/hz/subscribe/ku'],
+  ['Audible',          'https://www.audible.co.jp/account/cancel-membership'],
+  ['YouTube Premium',  'https://www.youtube.com/paid_memberships'],
+  ['YouTube Music',    'https://www.youtube.com/paid_memberships'],
+  ['Google One',       'https://one.google.com/settings'],
+  ['Disney+',          'https://www.disneyplus.com/ja-jp/account/subscription'],
+  ['Hulu',             'https://help.hulu.jp/hc/ja/articles/360000990283'],
+  ['U-NEXT',           'https://video.unext.jp/my/account/withdraw'],
+  ['ABEMA',            'https://account.abema.io/plan'],
+  ['DAZN',             'https://www.dazn.com/ja-JP/account/'],
+  // 音楽
+  ['Spotify',          'https://www.spotify.com/jp/account/subscription/cancel/'],
+  ['Apple Music',      'https://support.apple.com/ja-jp/118428'],
+  ['Apple TV',         'https://support.apple.com/ja-jp/118428'],
+  ['Apple Arcade',     'https://support.apple.com/ja-jp/118428'],
+  ['Apple One',        'https://support.apple.com/ja-jp/118428'],
+  ['iCloud',           'https://support.apple.com/ja-jp/118428'],
+  ['LINE MUSIC',       'https://music.line.me/account/plan'],
+  // ゲーム
+  ['PlayStation Plus', 'https://subscriptions.sonyentertainmentnetwork.com/'],
+  ['Nintendo',         'https://accounts.nintendo.com/'],
+  ['Xbox',             'https://account.microsoft.com/services'],
+  ['EA Play',          'https://www.ea.com/ja-jp/ea-play'],
+  // AI
+  ['ChatGPT',          'https://chat.openai.com/account/billing'],
+  ['Claude',           'https://claude.ai/settings'],
+  ['Microsoft Copilot','https://account.microsoft.com/services'],
+  ['Google One AI',    'https://one.google.com/settings'],
+  ['Perplexity',       'https://www.perplexity.ai/settings/subscription'],
+  ['Cursor',           'https://cursor.com/settings'],
+  ['GitHub Copilot',   'https://github.com/settings/billing'],
+  ['Midjourney',       'https://www.midjourney.com/account/'],
+  ['ElevenLabs',       'https://elevenlabs.io/subscription'],
+  ['DeepL',            'https://www.deepl.com/pro-account/plan'],
+  // 仕事・ツール
+  ['Adobe',            'https://account.adobe.com/plans'],
+  ['Microsoft 365',    'https://account.microsoft.com/services'],
+  ['Notion',           'https://www.notion.so/profile/billing'],
+  ['Figma',            'https://www.figma.com/settings/billing'],
+  ['Dropbox',          'https://www.dropbox.com/account/billing'],
+  ['Canva',            'https://www.canva.com/settings/account/billing'],
+  // SNS・その他
+  ['X Premium',        'https://twitter.com/settings/twitter_blue'],
+  ['Discord',          'https://discord.com/settings/subscriptions'],
+  ['NordVPN',          'https://my.nordaccount.com/dashboard/'],
+  ['ExpressVPN',       'https://www.expressvpn.com/subscriptions'],
+  ['ProtonVPN',        'https://account.proton.me/dashboard'],
+  // 学習
+  ['Duolingo',         'https://www.duolingo.com/settings/plus'],
+  ['Coursera',         'https://www.coursera.org/account-settings'],
+];
+
+export function getCancelUrl(name: string): string | null {
+  for (const [keyword, url] of CANCEL_URL_MAP) {
+    if (name.includes(keyword)) return url;
+  }
+  return null;
+}
+
 export const TEMPLATES: Record<Category, TemplateItem[]> = {
   subscription: [
     // ── Netflix ───────────────────────────────────────────────────────
