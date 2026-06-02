@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   StyleSheet,
   Alert,
   Linking,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +26,8 @@ import ServiceIcon, { ServiceIconMini, hasServiceIcon } from '../components/Serv
 import { getCancelUrl } from '../data/templates';
 
 const yen = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
+const SCREEN_W = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = 50;
 
 const WEEK_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -131,6 +136,31 @@ export default function CalendarScreen() {
     setSelectedDay(null);
   };
 
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const animateMonth = (direction: 'prev' | 'next') => {
+    const outX = direction === 'prev' ? SCREEN_W : -SCREEN_W;
+    const inX  = direction === 'prev' ? -SCREEN_W : SCREEN_W;
+    Animated.timing(translateX, { toValue: outX, duration: 180, useNativeDriver: true }).start(() => {
+      if (direction === 'prev') prevMonth(); else nextMonth();
+      translateX.setValue(inX);
+      Animated.timing(translateX, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    });
+  };
+
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) =>
+      Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && Math.abs(g.dx) > 10,
+    onPanResponderMove: (_, g) => {
+      translateX.setValue(g.dx * 0.25);
+    },
+    onPanResponderRelease: (_, g) => {
+      if (g.dx > SWIPE_THRESHOLD || g.vx > 0.5)       animateMonth('prev');
+      else if (g.dx < -SWIPE_THRESHOLD || g.vx < -0.5) animateMonth('next');
+      else Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+    },
+  })).current;
+
   const monthTotal = useMemo(() => {
     let total = 0;
     const daysInMonth = getDaysInMonth(new Date(viewYear, viewMonth, 1));
@@ -168,37 +198,38 @@ export default function CalendarScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── 曜日ヘッダ ── */}
-        <View style={c.weekRow}>
-          {WEEK_LABELS.map((w, i) => (
-            <Text key={w} style={[c.weekLabel, i === 0 && c.sun, i === 6 && c.sat]}>
-              {w}
-            </Text>
-          ))}
-        </View>
-
-        {/* ── カレンダーグリッド ── */}
-        <View style={c.grid}>
-          {cells.map((day, idx) => {
-            const dow = idx % 7;
-            const isToday =
-              day !== null &&
-              viewYear === today.getFullYear() &&
-              viewMonth === today.getMonth() &&
-              day === today.getDate();
-            return (
-              <DayCell
-                key={idx}
-                day={day}
-                expenses={expenses}
-                year={viewYear}
-                month={viewMonth}
-                isToday={isToday}
-                isSelected={day !== null && day === selectedDay}
-                onPress={() => day !== null && setSelectedDay(day)}
-              />
-            );
-          })}
+        {/* ── 曜日ヘッダ＋グリッド（スワイプで月移動） ── */}
+        <View style={c.calendarWrap}>
+          <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+            <View style={c.weekRow}>
+              {WEEK_LABELS.map((w, i) => (
+                <Text key={w} style={[c.weekLabel, i === 0 && c.sun, i === 6 && c.sat]}>
+                  {w}
+                </Text>
+              ))}
+            </View>
+            <View style={c.grid}>
+              {cells.map((day, idx) => {
+                const isToday =
+                  day !== null &&
+                  viewYear === today.getFullYear() &&
+                  viewMonth === today.getMonth() &&
+                  day === today.getDate();
+                return (
+                  <DayCell
+                    key={idx}
+                    day={day}
+                    expenses={expenses}
+                    year={viewYear}
+                    month={viewMonth}
+                    isToday={isToday}
+                    isSelected={day !== null && day === selectedDay}
+                    onPress={() => day !== null && setSelectedDay(day)}
+                  />
+                );
+              })}
+            </View>
+          </Animated.View>
         </View>
 
         {/* ── 選択日の支払い一覧 ── */}
@@ -284,6 +315,7 @@ const c = StyleSheet.create({
   navBtn:            { padding: 4 },
   monthLabel:        { fontSize: 18, fontWeight: '700', color: '#1A202C' },
   monthTotal:        { fontSize: 12, color: '#718096', marginTop: 4 },
+  calendarWrap:      { overflow: 'hidden', backgroundColor: '#fff' },
   weekRow:           { flexDirection: 'row', paddingHorizontal: 4, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   weekLabel:         { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: '#718096' },
   sun:               { color: '#FC5A5A' },
