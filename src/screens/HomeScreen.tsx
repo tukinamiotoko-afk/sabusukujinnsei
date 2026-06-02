@@ -553,7 +553,7 @@ function ExpenseModal({
   const [quickItem, setQuickItem] = useState<{
     cat: Category; item: TemplateItem;
     step: 'day' | 'amount' | 'payment';
-    tempAmount: string; tempCycle: Cycle; tempDay: string; tempCustomDays: string;
+    tempAmount: string; tempDay: string; tempCustomDays: string;
   } | null>(null);
   const quickSlideAnim = useRef(new Animated.Value(SCREEN_W)).current;
 
@@ -566,7 +566,6 @@ function ExpenseModal({
     setQuickItem({
       cat, item, step,
       tempAmount:     hasYenAmount ? String(item.amount) : '',
-      tempCycle:      item.cycle ?? 'monthly',
       tempDay:        String(new Date().getDate()),
       tempCustomDays: '',
     });
@@ -580,7 +579,7 @@ function ExpenseModal({
 
   const handleQuickConfirm = () => {
     if (!quickItem) return;
-    const { cat, item, step, tempAmount, tempCycle, tempDay, tempCustomDays } = quickItem;
+    const { cat, item, step, tempAmount, tempDay, tempCustomDays } = quickItem;
 
     // 金額入力ステップ → 支払周期ステップへ
     if (step === 'amount') {
@@ -594,11 +593,12 @@ function ExpenseModal({
     }
 
     const amount = parseInt(tempAmount, 10);
-    const cycle  = step === 'day' ? (item.cycle ?? 'monthly') : tempCycle;
+    const useCustom = tempCustomDays.length > 0 && parseInt(tempCustomDays, 10) > 0;
+    const cycle: Cycle = useCustom ? 'custom' : 'monthly';
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
     let nextDate: Date = today;
-    if (cycle === 'monthly') {
+    if (!useCustom) {
       const n = parseInt(tempDay, 10);
       if (n >= 1 && n <= 31) {
         let y = today.getFullYear(), m = today.getMonth();
@@ -614,7 +614,7 @@ function ExpenseModal({
       amount,
       category:        cat,
       cycle,
-      customCycleDays: cycle === 'custom' ? (parseInt(tempCustomDays, 10) || undefined) : undefined,
+      customCycleDays: useCustom ? parseInt(tempCustomDays, 10) : undefined,
       nextDate:        nextDate.toISOString(),
       memo:            '',
     };
@@ -803,7 +803,7 @@ function ExpenseModal({
                 {quickItem.step !== 'amount' && (
                   <Text style={s.qaServiceAmt}>
                     {yen(parseInt(quickItem.tempAmount, 10) || 0)}
-                    {' / '}{quickItem.step === 'day' ? '月' : CYCLE_LABEL[quickItem.tempCycle]}
+                    {' / '}{quickItem.tempCustomDays ? `${quickItem.tempCustomDays}日ごと` : '毎月'}
                   </Text>
                 )}
               </View>
@@ -833,64 +833,39 @@ function ExpenseModal({
 
             {/* ── step: payment ── */}
             {quickItem.step === 'payment' && (
-              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.qaPanelBody}>
-                <Text style={s.qaDayPrompt}>支払い周期</Text>
-                <View style={s.payPanelCycleList}>
-                  {CYCLES.map(cycle => {
-                    const sel = quickItem.tempCycle === cycle;
-                    return (
-                      <TouchableOpacity
-                        key={cycle}
-                        style={[s.cycleRow, { paddingHorizontal: 14 }, sel && s.cycleRowSelected]}
-                        onPress={() => setQuickItem(q => q && ({ ...q, tempCycle: cycle }))}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>{CYCLE_LABEL[cycle]}</Text>
-                        {sel && <Ionicons name="checkmark" size={16} color="#374151" />}
-                      </TouchableOpacity>
-                    );
-                  })}
+              <View style={s.qaPanelBody}>
+                <Text style={s.qaDayPrompt}>毎月の支払日</Text>
+                <View style={s.qaDayRow}>
+                  <Text style={s.qaDayLabel}>毎月</Text>
+                  <TextInput
+                    style={s.qaDayInput}
+                    value={quickItem.tempDay}
+                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
+                    placeholder="15"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoFocus
+                  />
+                  <Text style={s.qaDayLabel}>日払い</Text>
                 </View>
-                {quickItem.tempCycle === 'monthly' && (
-                  <>
-                    <View style={s.dayPanelDivider} />
-                    <Text style={[s.qaDayPrompt, { marginBottom: 12 }]}>毎月の支払日</Text>
-                    <View style={s.qaDayRow}>
-                      <Text style={s.qaDayLabel}>毎月</Text>
-                      <TextInput
-                        style={s.qaDayInput}
-                        value={quickItem.tempDay}
-                        onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
-                        placeholder="15"
-                        placeholderTextColor="#CBD5E0"
-                        keyboardType="number-pad"
-                        maxLength={2}
-                      />
-                      <Text style={s.qaDayLabel}>日払い</Text>
-                    </View>
-                  </>
-                )}
-                {quickItem.tempCycle === 'custom' && (
-                  <>
-                    <View style={s.dayPanelDivider} />
-                    <Text style={[s.qaDayPrompt, { marginBottom: 12 }]}>間隔（日数）</Text>
-                    <View style={s.qaDayRow}>
-                      <TextInput
-                        style={[s.qaDayInput, { width: 110 }]}
-                        value={quickItem.tempCustomDays}
-                        onChangeText={v => setQuickItem(q => q && ({ ...q, tempCustomDays: v.replace(/[^0-9]/g, '') }))}
-                        placeholder="30"
-                        placeholderTextColor="#CBD5E0"
-                        keyboardType="number-pad"
-                      />
-                      <Text style={s.qaDayLabel}>日ごと</Text>
-                    </View>
-                  </>
-                )}
-                <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={handleQuickConfirm} activeOpacity={0.85}>
+                <View style={[s.dayPanelDivider, { width: '100%' }]} />
+                <Text style={s.qaDayPrompt}>支払周期</Text>
+                <View style={s.qaDayRow}>
+                  <TextInput
+                    style={[s.qaDayInput, { width: 110 }]}
+                    value={quickItem.tempCustomDays}
+                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempCustomDays: v.replace(/[^0-9]/g, '') }))}
+                    placeholder="30"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                  />
+                  <Text style={s.qaDayLabel}>日ごと</Text>
+                </View>
+                <TouchableOpacity style={[s.qaBtn, { marginTop: 8 }]} onPress={handleQuickConfirm} activeOpacity={0.85}>
                   <Text style={s.qaBtnText}>登録する</Text>
                 </TouchableOpacity>
-              </ScrollView>
+              </View>
             )}
 
             {/* ── step: day（毎月払いサブスク） ── */}
