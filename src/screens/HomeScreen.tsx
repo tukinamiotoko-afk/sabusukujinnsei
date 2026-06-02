@@ -124,7 +124,6 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
 
   const handleCardPress = () => {
     if (openDir.current !== 'none') close();
-    else onEdit();
   };
 
   const handleDelete = () => {
@@ -176,7 +175,7 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
           <View style={s.cardRight}>
             <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
             <TouchableOpacity onPress={onEdit} hitSlop={8} style={s.editIconBtn}>
-              <Ionicons name="create-outline" size={18} color="#A0AEC0" />
+              <Ionicons name="create-outline" size={20} color="#718096" />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
