@@ -545,12 +545,12 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
 // ─── 追加・編集モーダル ───────────────────────────────────────────────────────
 
 function ExpenseModal({
-  visible, isEdit, form, setForm, onSave, onClose, onDirectAdd,
+  visible, isEdit, form, setForm, onSave, onClose, onQuickAdd,
 }: {
   visible: boolean; isEdit: boolean;
   form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>;
   onSave: () => void; onClose: () => void;
-  onDirectAdd: (cat: Category, item: TemplateItem) => void;
+  onQuickAdd: (exp: Expense) => void;
 }) {
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [showDate, setShowDate] = useState(false);
@@ -559,6 +559,52 @@ function ExpenseModal({
   const [dayInput, setDayInput] = useState('');
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
+
+  // クイック追加パネル
+  const [quickItem, setQuickItem] = useState<{ cat: Category; item: TemplateItem } | null>(null);
+  const [quickDay,  setQuickDay]  = useState('');
+  const quickSlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
+
+  const openQuickPanel = (cat: Category, item: TemplateItem) => {
+    setQuickItem({ cat, item });
+    setQuickDay(String(new Date().getDate()));
+    Animated.timing(quickSlideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+  };
+
+  const closeQuickPanel = () => {
+    Animated.timing(quickSlideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
+      .start(() => setQuickItem(null));
+  };
+
+  const handleQuickConfirm = () => {
+    if (!quickItem) return;
+    const { cat, item } = quickItem;
+    const n = parseInt(quickDay, 10);
+    let nextDate: Date;
+    if (item.cycle === 'yearly') {
+      nextDate = new Date();
+    } else if (n >= 1 && n <= 31) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      let y = today.getFullYear(), m = today.getMonth();
+      const candidate = new Date(y, m, n);
+      if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
+      nextDate = new Date(y, m, n);
+    } else {
+      nextDate = new Date();
+    }
+    const exp: Expense = {
+      id:              genId(),
+      name:            item.name,
+      amount:          item.amount!,
+      category:        cat,
+      cycle:           item.cycle ?? 'monthly',
+      customCycleDays: undefined,
+      nextDate:        nextDate.toISOString(),
+      memo:            '',
+    };
+    onQuickAdd(exp);
+    closeQuickPanel();
+  };
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;
@@ -655,7 +701,7 @@ function ExpenseModal({
           {/* コンテンツ */}
           <View style={{ flex: 1 }}>
             {activeTab === 'template' ? (
-              <TemplateBrowser onSelect={handleTemplateSelect} onDirectAdd={onDirectAdd} />
+              <TemplateBrowser onSelect={handleTemplateSelect} onDirectAdd={openQuickPanel} />
             ) : (
               <CustomForm
                 form={form}
@@ -707,6 +753,60 @@ function ExpenseModal({
                 );
               })}
             </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* クイック追加パネル */}
+        {quickItem && (
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: '#F5F6FA', transform: [{ translateX: quickSlideAnim }] },
+            ]}
+          >
+            <View style={s.catPanelHeader}>
+              <TouchableOpacity style={s.catPanelBackBtn} onPress={closeQuickPanel} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={22} color="#6C63FF" />
+              </TouchableOpacity>
+              <Text style={s.catPanelTitle}>支払日を確認</Text>
+              <View style={{ width: 44 }} />
+            </View>
+            <View style={s.qaPanelBody}>
+              {hasServiceIcon(quickItem.item.name)
+                ? <View style={{ marginBottom: 4 }}><ServiceIcon name={quickItem.item.name} size={72} /></View>
+                : <View style={[s.qaPanelIcon, { backgroundColor: CAT[quickItem.cat].color + '20' }]}>
+                    <Ionicons name={CAT[quickItem.cat].icon as never} size={30} color={CAT[quickItem.cat].color} />
+                  </View>
+              }
+              <Text style={s.qaPanelName}>{quickItem.item.name}</Text>
+              <Text style={s.qaPanelAmount}>
+                {yen(quickItem.item.amount!)} / {quickItem.item.cycle === 'yearly' ? '年' : '月'}
+              </Text>
+
+              {quickItem.item.cycle !== 'yearly' && (
+                <>
+                  <Text style={s.qaDayPrompt}>毎月の支払日</Text>
+                  <View style={s.qaDayRow}>
+                    <Text style={s.qaDayLabel}>毎月</Text>
+                    <TextInput
+                      style={s.qaDayInput}
+                      value={quickDay}
+                      onChangeText={v => setQuickDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                      placeholder="15"
+                      placeholderTextColor="#CBD5E0"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      autoFocus
+                    />
+                    <Text style={s.qaDayLabel}>日払い</Text>
+                  </View>
+                </>
+              )}
+
+              <TouchableOpacity style={s.qaBtn} onPress={handleQuickConfirm} activeOpacity={0.85}>
+                <Text style={s.qaBtnText}>登録する</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         )}
 
@@ -908,17 +1008,7 @@ export default function HomeScreen() {
     setModalVisible(false);
   };
 
-  const handleDirectAdd = (cat: Category, item: TemplateItem) => {
-    const exp: Expense = {
-      id:              genId(),
-      name:            item.name,
-      amount:          item.amount!,
-      category:        cat,
-      cycle:           item.cycle ?? 'monthly',
-      customCycleDays: undefined,
-      nextDate:        new Date().toISOString(),
-      memo:            '',
-    };
+  const handleQuickAdd = (exp: Expense) => {
     setExpenses(prev => [...prev, exp]);
     setModalVisible(false);
   };
@@ -939,17 +1029,13 @@ export default function HomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={s.summaryBox}>
-          <View style={s.summaryItem}>
-            <Text style={s.summaryLabel}>月額見込み</Text>
-            <Text style={s.summaryValue}>{yen(dispMonthly)}</Text>
-            <Text style={s.summaryNote}>{expenses.length}件登録</Text>
-          </View>
-          <View style={s.summaryDivider} />
-          <View style={s.summaryItem}>
-            <Text style={s.summaryLabel}>年間見込み</Text>
-            <Text style={s.summaryValue}>{yen(dispAnnual)}</Text>
-            <Text style={s.summaryNote}>月平均 {yen(dispMonthly)}</Text>
+        <View style={s.summaryNew}>
+          <Text style={s.summaryMonthLabel}>月額見込み</Text>
+          <Text style={s.summaryMonthVal}>{yen(dispMonthly)}</Text>
+          <View style={s.summaryFootRow}>
+            <Text style={s.summaryAnnualTxt}>年間 {yen(dispAnnual)}</Text>
+            <View style={s.summaryDot} />
+            <Text style={s.summaryCountTxt}>{expenses.length}件登録</Text>
           </View>
         </View>
       </LinearGradient>
@@ -1004,7 +1090,7 @@ export default function HomeScreen() {
         setForm={setForm}
         onSave={handleSave}
         onClose={() => setModalVisible(false)}
-        onDirectAdd={handleDirectAdd}
+        onQuickAdd={handleQuickAdd}
       />
     </View>
   );
@@ -1017,12 +1103,13 @@ const s = StyleSheet.create({
   header:            { paddingHorizontal: 20, paddingBottom: 24 },
   appTitle:          { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
   appSub:            { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2, marginBottom: 16 },
-  summaryBox:        { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 18, padding: 16 },
-  summaryItem:       { flex: 1, alignItems: 'center' },
-  summaryDivider:    { width: 1, backgroundColor: 'rgba(255,255,255,0.3)', marginVertical: 4 },
-  summaryLabel:      { fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: '600', marginBottom: 5 },
-  summaryValue:      { fontSize: 21, fontWeight: '800', color: '#fff' },
-  summaryNote:       { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+  summaryNew:        { marginTop: 12 },
+  summaryMonthLabel: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600', letterSpacing: 0.5, marginBottom: 4 },
+  summaryMonthVal:   { fontSize: 46, fontWeight: '800', color: '#fff', letterSpacing: -1 },
+  summaryFootRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  summaryAnnualTxt:  { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+  summaryDot:        { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.4)' },
+  summaryCountTxt:   { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
   nextBox:           { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   nextLabel:         { fontSize: 11, fontWeight: '700', color: '#A0AEC0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   nextRow:           { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1129,6 +1216,18 @@ const s = StyleSheet.create({
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
   catPanelRowTextSel:   { color: '#6C63FF', fontWeight: '700' },
+
+  // クイック追加パネル
+  qaPanelBody:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
+  qaPanelIcon:      { width: 72, height: 72, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  qaPanelName:      { fontSize: 22, fontWeight: '800', color: '#1A202C', textAlign: 'center' },
+  qaPanelAmount:    { fontSize: 18, fontWeight: '700', color: '#6C63FF', marginBottom: 8 },
+  qaDayPrompt:      { fontSize: 12, fontWeight: '700', color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: 0.5 },
+  qaDayRow:         { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  qaDayLabel:       { fontSize: 18, fontWeight: '600', color: '#4A5568' },
+  qaDayInput:       { fontSize: 38, fontWeight: '800', color: '#6C63FF', textAlign: 'center', backgroundColor: '#EEF2FF', borderRadius: 12, paddingVertical: 10, width: 110, borderWidth: 2, borderColor: '#C7D2FE' },
+  qaBtn:            { backgroundColor: '#6C63FF', borderRadius: 14, paddingVertical: 16, marginTop: 12, alignItems: 'center', width: '100%' },
+  qaBtnText:        { fontSize: 17, fontWeight: '700', color: '#fff' },
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
