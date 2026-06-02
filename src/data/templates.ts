@@ -4,11 +4,29 @@ export interface TemplateItem {
   name: string;        // 登録時のサービス名
   planName?: string;   // プラン一覧に表示する短いラベル
   group?: string;      // 同一グループのサービスをまとめるキー
+  subcat?: string;     // サブスクのサブカテゴリキー
   amount?: number;
   yearlyAmount?: number; // 年額（月額と同時表示）
   cycle?: Cycle;
   currency?: 'USD';    // 未設定は円
 }
+
+export interface SubcatConfig {
+  label: string;
+  icon: string;
+  color: string;
+}
+
+export const SUBSCRIPTION_SUBCATS: Record<string, SubcatConfig> = {
+  entertainment: { label: 'エンタメ',     icon: 'film-outline',             color: '#E53E3E' },
+  music:         { label: '音楽',         icon: 'musical-notes-outline',    color: '#D69E2E' },
+  game:          { label: 'ゲーム',       icon: 'game-controller-outline',  color: '#38A169' },
+  ai:            { label: 'AI',           icon: 'sparkles-outline',         color: '#805AD5' },
+  work:          { label: '仕事・ツール', icon: 'briefcase-outline',        color: '#3182CE' },
+  creator:       { label: 'クリエイター', icon: 'color-palette-outline',    color: '#D53F8C' },
+  reading:       { label: '読書・学習',   icon: 'book-outline',             color: '#744210' },
+  other:         { label: 'その他',       icon: 'apps-outline',             color: '#718096' },
+};
 
 export const TEMPLATES: Record<Category, TemplateItem[]> = {
   subscription: [
