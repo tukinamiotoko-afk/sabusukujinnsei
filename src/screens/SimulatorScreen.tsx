@@ -225,7 +225,7 @@ const s = StyleSheet.create({
   root:             { flex: 1, backgroundColor: '#F5F6FA' },
 
   // ヘッダー
-  header:           { backgroundColor: '#6C63FF', paddingHorizontal: 20, paddingBottom: 20 },
+  header:           { backgroundColor: '#374151', paddingHorizontal: 20, paddingBottom: 20 },
   headerTitle:      { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
   headerSub:        { fontSize: 13, color: 'rgba(255,255,255,0.72)', marginTop: 3 },
 

@@ -152,43 +152,32 @@ function TmplIcon({ name, color, icon }: { name: string; color: string; icon: st
       </View>;
 }
 
-function BillingButtons({ item, cat, onSelect, onDirectAdd }: {
+function BillingButtons({ item, cat, onDirectAdd }: {
   item: TemplateItem; cat: Category;
-  onSelect: (cat: Category, item: TemplateItem) => void;
   onDirectAdd: (cat: Category, item: TemplateItem) => void;
 }) {
-  const isYen = item.currency !== 'USD';
   return (
     <View style={s.billingBtns}>
       {item.amount !== undefined && (
-        <TouchableOpacity
-          style={s.billingBtn}
-          onPress={() => isYen ? onDirectAdd(cat, item) : onSelect(cat, item)}
-        >
+        <TouchableOpacity style={s.billingBtn} onPress={() => onDirectAdd(cat, item)}>
           <Text style={s.billingBtnLabel}>月払い</Text>
-          <Text style={s.billingBtnAmount}>{yen(item.amount)}</Text>
+          <Text style={s.billingBtnAmount}>{item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}</Text>
         </TouchableOpacity>
       )}
       {item.yearlyAmount !== undefined && (
         <TouchableOpacity
           style={[s.billingBtn, s.billingBtnYearly]}
-          onPress={() => isYen
-            ? onDirectAdd(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })
-            : onSelect(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}
+          onPress={() => onDirectAdd(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}
         >
           <Text style={[s.billingBtnLabel, s.billingBtnLabelYearly]}>年払い</Text>
-          <Text style={[s.billingBtnAmount, s.billingBtnAmountYearly]}>{yen(item.yearlyAmount!)}</Text>
+          <Text style={[s.billingBtnAmount, s.billingBtnAmountYearly]}>{item.currency === 'USD' ? `$${item.yearlyAmount}` : yen(item.yearlyAmount!)}</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-const canDirectAdd = (item: TemplateItem) =>
-  item.amount !== undefined && item.currency !== 'USD';
-
-function TemplateBrowser({ onSelect, onDirectAdd }: {
-  onSelect: (cat: Category, item: TemplateItem) => void;
+function TemplateBrowser({ onDirectAdd }: {
   onDirectAdd: (cat: Category, item: TemplateItem) => void;
 }) {
   const [search, setSearch]         = useState('');
@@ -247,13 +236,13 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
                   <View key={i} style={s.tmplItem}>
                     <TmplIcon name={item.name} color={color} icon={icon} />
                     <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{item.name}</Text>
-                    <BillingButtons item={item} cat={cat} onSelect={onSelect} onDirectAdd={onDirectAdd} />
+                    <BillingButtons item={item} cat={cat} onDirectAdd={onDirectAdd} />
                   </View>
                 );
               }
               return (
                 <TouchableOpacity key={i} style={s.tmplItem}
-                  onPress={() => canDirectAdd(item) ? onDirectAdd(cat, item) : onSelect(cat, item)}
+                  onPress={() => onDirectAdd(cat, item)}
                   activeOpacity={0.7}>
                   <TmplIcon name={item.name} color={color} icon={icon} />
                   <View style={{ flex: 1 }}>
@@ -265,7 +254,7 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
                       {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
                     </Text>
                   )}
-                  <Ionicons name="add-circle-outline" size={22} color="#6C63FF" />
+                  <Ionicons name="add-circle-outline" size={22} color="#374151" />
                 </TouchableOpacity>
               );
             })
@@ -283,7 +272,7 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
         <TouchableOpacity style={s.tmplBack} onPress={() => setActiveGroup(null)}>
-          <Ionicons name="chevron-back" size={18} color="#6C63FF" />
+          <Ionicons name="chevron-back" size={18} color="#374151" />
           <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
             <Ionicons name={icon as never} size={14} color={color} />
           </View>
@@ -297,13 +286,13 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
                 <View key={i} style={s.tmplItem}>
                   <TmplIcon name={item.name} color={color} icon={icon} />
                   <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{planLabel}</Text>
-                  <BillingButtons item={item} cat={activeCategory} onSelect={onSelect} onDirectAdd={onDirectAdd} />
+                  <BillingButtons item={item} cat={activeCategory} onDirectAdd={onDirectAdd} />
                 </View>
               );
             }
             return (
               <TouchableOpacity key={i} style={s.tmplItem}
-                onPress={() => canDirectAdd(item) ? onDirectAdd(activeCategory, item) : onSelect(activeCategory, item)}
+                onPress={() => onDirectAdd(activeCategory, item)}
                 activeOpacity={0.7}>
                 <TmplIcon name={item.name} color={color} icon={icon} />
                 <View style={{ flex: 1 }}>
@@ -312,7 +301,7 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
                     <Text style={s.tmplItemMeta}>{yen(item.amount)}/月</Text>
                   )}
                 </View>
-                <Ionicons name="add-circle-outline" size={22} color="#6C63FF" />
+                <Ionicons name="add-circle-outline" size={22} color="#374151" />
               </TouchableOpacity>
             );
           })}
@@ -329,7 +318,7 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
         <TouchableOpacity style={s.tmplBack} onPress={() => { setActiveCategory(null); setActiveGroup(null); }}>
-          <Ionicons name="chevron-back" size={18} color="#6C63FF" />
+          <Ionicons name="chevron-back" size={18} color="#374151" />
           <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
             <Ionicons name={icon as never} size={14} color={color} />
           </View>
@@ -355,13 +344,13 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
                 <View key={i} style={s.tmplItem}>
                   <TmplIcon name={item.name} color={color} icon={icon} />
                   <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{item.name}</Text>
-                  <BillingButtons item={item} cat={activeCategory} onSelect={onSelect} onDirectAdd={onDirectAdd} />
+                  <BillingButtons item={item} cat={activeCategory} onDirectAdd={onDirectAdd} />
                 </View>
               );
             }
             return (
               <TouchableOpacity key={i} style={s.tmplItem}
-                onPress={() => canDirectAdd(item) ? onDirectAdd(activeCategory, item) : onSelect(activeCategory, item)}
+                onPress={() => onDirectAdd(activeCategory, item)}
                 activeOpacity={0.7}>
                 <TmplIcon name={item.name} color={color} icon={icon} />
                 <View style={{ flex: 1 }}>
@@ -373,7 +362,7 @@ function TemplateBrowser({ onSelect, onDirectAdd }: {
                     {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
                   </Text>
                 )}
-                <Ionicons name="add-circle-outline" size={22} color="#6C63FF" />
+                <Ionicons name="add-circle-outline" size={22} color="#374151" />
               </TouchableOpacity>
             );
           })}
@@ -486,7 +475,7 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
             onPress={onOpenPayPanel}
             activeOpacity={0.75}
           >
-            <Ionicons name="calendar-outline" size={15} color="#6C63FF" />
+            <Ionicons name="calendar-outline" size={15} color="#374151" />
             <Text style={s.dropdownTriggerText}>{payDisplay}</Text>
             <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
           </TouchableOpacity>
@@ -499,7 +488,7 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
             style={[s.textInput, s.dateSelector]}
             onPress={() => setShowDate(true)}
           >
-            <Ionicons name="calendar-outline" size={18} color="#6C63FF" />
+            <Ionicons name="calendar-outline" size={18} color="#374151" />
             <Text style={s.dateSelectorText}>
               {format(form.nextDate, 'yyyy年M月d日(E)', { locale: ja })}
             </Text>
@@ -561,13 +550,26 @@ function ExpenseModal({
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
 
   // クイック追加パネル
-  const [quickItem, setQuickItem] = useState<{ cat: Category; item: TemplateItem } | null>(null);
-  const [quickDay,  setQuickDay]  = useState('');
-  const quickSlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
+  const [quickItem, setQuickItem] = useState<{
+    cat: Category; item: TemplateItem;
+    step: 'day' | 'amount' | 'payment';
+    tempAmount: string; tempCycle: Cycle; tempDay: string; tempCustomDays: string;
+  } | null>(null);
+  const quickSlideAnim = useRef(new Animated.Value(SCREEN_W)).current;
 
   const openQuickPanel = (cat: Category, item: TemplateItem) => {
-    setQuickItem({ cat, item });
-    setQuickDay(String(new Date().getDate()));
+    const hasYenAmount = item.amount !== undefined && item.currency !== 'USD';
+    const isMonthly    = !item.cycle || item.cycle === 'monthly';
+    const step = hasYenAmount && isMonthly ? 'day'
+               : hasYenAmount              ? 'payment'
+               :                             'amount';
+    setQuickItem({
+      cat, item, step,
+      tempAmount:     hasYenAmount ? String(item.amount) : '',
+      tempCycle:      item.cycle ?? 'monthly',
+      tempDay:        String(new Date().getDate()),
+      tempCustomDays: '',
+    });
     Animated.timing(quickSlideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
   };
 
@@ -578,27 +580,41 @@ function ExpenseModal({
 
   const handleQuickConfirm = () => {
     if (!quickItem) return;
-    const { cat, item } = quickItem;
-    const n = parseInt(quickDay, 10);
-    let nextDate: Date;
-    if (item.cycle === 'yearly') {
-      nextDate = new Date();
-    } else if (n >= 1 && n <= 31) {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      let y = today.getFullYear(), m = today.getMonth();
-      const candidate = new Date(y, m, n);
-      if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
-      nextDate = new Date(y, m, n);
-    } else {
-      nextDate = new Date();
+    const { cat, item, step, tempAmount, tempCycle, tempDay, tempCustomDays } = quickItem;
+
+    // 金額入力ステップ → 支払周期ステップへ
+    if (step === 'amount') {
+      const n = parseInt(tempAmount, 10);
+      if (!tempAmount || isNaN(n) || n <= 0) {
+        Alert.alert('入力エラー', '正しい金額を入力してください');
+        return;
+      }
+      setQuickItem(q => q && ({ ...q, step: 'payment' }));
+      return;
     }
+
+    const amount = parseInt(tempAmount, 10);
+    const cycle  = step === 'day' ? (item.cycle ?? 'monthly') : tempCycle;
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let nextDate: Date = today;
+    if (cycle === 'monthly') {
+      const n = parseInt(tempDay, 10);
+      if (n >= 1 && n <= 31) {
+        let y = today.getFullYear(), m = today.getMonth();
+        const candidate = new Date(y, m, n);
+        if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
+        nextDate = new Date(y, m, n);
+      }
+    }
+
     const exp: Expense = {
       id:              genId(),
       name:            item.name,
-      amount:          item.amount!,
+      amount,
       category:        cat,
-      cycle:           item.cycle ?? 'monthly',
-      customCycleDays: undefined,
+      cycle,
+      customCycleDays: cycle === 'custom' ? (parseInt(tempCustomDays, 10) || undefined) : undefined,
       nextDate:        nextDate.toISOString(),
       memo:            '',
     };
@@ -701,7 +717,7 @@ function ExpenseModal({
           {/* コンテンツ */}
           <View style={{ flex: 1 }}>
             {activeTab === 'template' ? (
-              <TemplateBrowser onSelect={handleTemplateSelect} onDirectAdd={openQuickPanel} />
+              <TemplateBrowser onDirectAdd={openQuickPanel} />
             ) : (
               <CustomForm
                 form={form}
@@ -725,7 +741,7 @@ function ExpenseModal({
           >
             <View style={s.catPanelHeader}>
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closeCatPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#6C63FF" />
+                <Ionicons name="chevron-back" size={22} color="#374151" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>カテゴリを選択</Text>
               <View style={{ width: 44 }} />
@@ -748,7 +764,7 @@ function ExpenseModal({
                       <Ionicons name={icon as never} size={18} color={color} />
                     </View>
                     <Text style={[s.catPanelRowText, sel && s.catPanelRowTextSel]}>{label}</Text>
-                    {sel && <Ionicons name="checkmark" size={18} color="#6C63FF" />}
+                    {sel && <Ionicons name="checkmark" size={18} color="#374151" />}
                   </TouchableOpacity>
                 );
               })}
@@ -766,47 +782,140 @@ function ExpenseModal({
           >
             <View style={s.catPanelHeader}>
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closeQuickPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#6C63FF" />
+                <Ionicons name="chevron-back" size={22} color="#374151" />
               </TouchableOpacity>
-              <Text style={s.catPanelTitle}>支払日を確認</Text>
+              <Text style={s.catPanelTitle}>
+                {quickItem.step === 'amount' ? '金額を入力' : quickItem.step === 'payment' ? '支払い周期' : '支払日を確認'}
+              </Text>
               <View style={{ width: 44 }} />
             </View>
-            <View style={s.qaPanelBody}>
+
+            {/* ── サービス情報（共通ヘッダ） ── */}
+            <View style={s.qaServiceRow}>
               {hasServiceIcon(quickItem.item.name)
-                ? <View style={{ marginBottom: 4 }}><ServiceIcon name={quickItem.item.name} size={72} /></View>
+                ? <ServiceIcon name={quickItem.item.name} size={48} />
                 : <View style={[s.qaPanelIcon, { backgroundColor: CAT[quickItem.cat].color + '20' }]}>
-                    <Ionicons name={CAT[quickItem.cat].icon as never} size={30} color={CAT[quickItem.cat].color} />
+                    <Ionicons name={CAT[quickItem.cat].icon as never} size={22} color={CAT[quickItem.cat].color} />
                   </View>
               }
-              <Text style={s.qaPanelName}>{quickItem.item.name}</Text>
-              <Text style={s.qaPanelAmount}>
-                {yen(quickItem.item.amount!)} / {quickItem.item.cycle === 'yearly' ? '年' : '月'}
-              </Text>
-
-              {quickItem.item.cycle !== 'yearly' && (
-                <>
-                  <Text style={s.qaDayPrompt}>毎月の支払日</Text>
-                  <View style={s.qaDayRow}>
-                    <Text style={s.qaDayLabel}>毎月</Text>
-                    <TextInput
-                      style={s.qaDayInput}
-                      value={quickDay}
-                      onChangeText={v => setQuickDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
-                      placeholder="15"
-                      placeholderTextColor="#CBD5E0"
-                      keyboardType="number-pad"
-                      maxLength={2}
-                      autoFocus
-                    />
-                    <Text style={s.qaDayLabel}>日払い</Text>
-                  </View>
-                </>
-              )}
-
-              <TouchableOpacity style={s.qaBtn} onPress={handleQuickConfirm} activeOpacity={0.85}>
-                <Text style={s.qaBtnText}>登録する</Text>
-              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={s.qaServiceName}>{quickItem.item.name}</Text>
+                {quickItem.step !== 'amount' && (
+                  <Text style={s.qaServiceAmt}>
+                    {yen(parseInt(quickItem.tempAmount, 10) || 0)}
+                    {' / '}{quickItem.step === 'day' ? '月' : CYCLE_LABEL[quickItem.tempCycle]}
+                  </Text>
+                )}
+              </View>
             </View>
+
+            {/* ── step: amount ── */}
+            {quickItem.step === 'amount' && (
+              <View style={s.qaPanelBody}>
+                <Text style={s.qaDayPrompt}>金額（円）</Text>
+                <View style={s.qaAmountRow}>
+                  <Text style={s.qaAmountSign}>¥</Text>
+                  <TextInput
+                    style={s.qaAmountInput}
+                    value={quickItem.tempAmount}
+                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempAmount: v.replace(/[^0-9]/g, '') }))}
+                    placeholder="0"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                    autoFocus
+                  />
+                </View>
+                <TouchableOpacity style={s.qaBtn} onPress={handleQuickConfirm} activeOpacity={0.85}>
+                  <Text style={s.qaBtnText}>次へ　→</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* ── step: payment ── */}
+            {quickItem.step === 'payment' && (
+              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.qaPanelBody}>
+                <Text style={s.qaDayPrompt}>支払い周期</Text>
+                <View style={s.payPanelCycleList}>
+                  {CYCLES.map(cycle => {
+                    const sel = quickItem.tempCycle === cycle;
+                    return (
+                      <TouchableOpacity
+                        key={cycle}
+                        style={[s.cycleRow, { paddingHorizontal: 14 }, sel && s.cycleRowSelected]}
+                        onPress={() => setQuickItem(q => q && ({ ...q, tempCycle: cycle }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>{CYCLE_LABEL[cycle]}</Text>
+                        {sel && <Ionicons name="checkmark" size={16} color="#374151" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {quickItem.tempCycle === 'monthly' && (
+                  <>
+                    <View style={s.dayPanelDivider} />
+                    <Text style={[s.qaDayPrompt, { marginBottom: 12 }]}>毎月の支払日</Text>
+                    <View style={s.qaDayRow}>
+                      <Text style={s.qaDayLabel}>毎月</Text>
+                      <TextInput
+                        style={s.qaDayInput}
+                        value={quickItem.tempDay}
+                        onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
+                        placeholder="15"
+                        placeholderTextColor="#CBD5E0"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                      />
+                      <Text style={s.qaDayLabel}>日払い</Text>
+                    </View>
+                  </>
+                )}
+                {quickItem.tempCycle === 'custom' && (
+                  <>
+                    <View style={s.dayPanelDivider} />
+                    <Text style={[s.qaDayPrompt, { marginBottom: 12 }]}>間隔（日数）</Text>
+                    <View style={s.qaDayRow}>
+                      <TextInput
+                        style={[s.qaDayInput, { width: 110 }]}
+                        value={quickItem.tempCustomDays}
+                        onChangeText={v => setQuickItem(q => q && ({ ...q, tempCustomDays: v.replace(/[^0-9]/g, '') }))}
+                        placeholder="30"
+                        placeholderTextColor="#CBD5E0"
+                        keyboardType="number-pad"
+                      />
+                      <Text style={s.qaDayLabel}>日ごと</Text>
+                    </View>
+                  </>
+                )}
+                <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={handleQuickConfirm} activeOpacity={0.85}>
+                  <Text style={s.qaBtnText}>登録する</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            {/* ── step: day（毎月払いサブスク） ── */}
+            {quickItem.step === 'day' && (
+              <View style={s.qaPanelBody}>
+                <Text style={s.qaDayPrompt}>毎月の支払日</Text>
+                <View style={s.qaDayRow}>
+                  <Text style={s.qaDayLabel}>毎月</Text>
+                  <TextInput
+                    style={s.qaDayInput}
+                    value={quickItem.tempDay}
+                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
+                    placeholder="15"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoFocus
+                  />
+                  <Text style={s.qaDayLabel}>日払い</Text>
+                </View>
+                <TouchableOpacity style={s.qaBtn} onPress={handleQuickConfirm} activeOpacity={0.85}>
+                  <Text style={s.qaBtnText}>登録する</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </Animated.View>
         )}
 
@@ -820,7 +929,7 @@ function ExpenseModal({
           >
             <View style={s.catPanelHeader}>
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closePayPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#6C63FF" />
+                <Ionicons name="chevron-back" size={22} color="#374151" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>支払日または支払周期</Text>
               <View style={{ width: 44 }} />
@@ -885,7 +994,7 @@ function ExpenseModal({
                       <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>
                         {CYCLE_LABEL[cycle]}
                       </Text>
-                      {sel && <Ionicons name="checkmark" size={16} color="#6C63FF" />}
+                      {sel && <Ionicons name="checkmark" size={16} color="#374151" />}
                     </TouchableOpacity>
                   );
                 })}
@@ -1030,7 +1139,7 @@ export default function HomeScreen() {
   return (
     <View style={s.root}>
       <LinearGradient
-        colors={['#7B6FFF', '#6C63FF', '#5A52E8']}
+        colors={['#4B5563', '#374151', '#1F2937']}
         style={[s.header, { paddingTop: insets.top + 12 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -1080,7 +1189,7 @@ export default function HomeScreen() {
         activeOpacity={0.85}
       >
         <LinearGradient
-          colors={['#7B6FFF', '#6C63FF']}
+          colors={['#4B5563', '#374151']}
           style={s.fabInner}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -1122,7 +1231,7 @@ const s = StyleSheet.create({
   nextDot:           { width: 8, height: 8, borderRadius: 4 },
   nextName:          { flex: 1, fontSize: 15, fontWeight: '700', color: '#1A202C' },
   nextDate:          { fontSize: 13, color: '#718096' },
-  nextAmount:        { fontSize: 15, fontWeight: '800', color: '#6C63FF', marginLeft: 8 },
+  nextAmount:        { fontSize: 15, fontWeight: '800', color: '#374151', marginLeft: 8 },
   listHeader:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   listTitle:         { fontSize: 16, fontWeight: '700', color: '#1A202C' },
   listCount:         { fontSize: 13, color: '#A0AEC0' },
@@ -1146,7 +1255,7 @@ const s = StyleSheet.create({
   empty:             { alignItems: 'center', paddingVertical: 60, gap: 10 },
   emptyTitle:        { fontSize: 16, fontWeight: '600', color: '#CBD5E0' },
   emptySub:          { fontSize: 13, color: '#CBD5E0' },
-  fab:               { position: 'absolute', right: 22, borderRadius: 30, shadowColor: '#6C63FF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+  fab:               { position: 'absolute', right: 22, borderRadius: 30, shadowColor: '#374151', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   fabInner:          { width: 58, height: 58, borderRadius: 29, justifyContent: 'center', alignItems: 'center' },
   fabText:           { fontSize: 28, color: '#fff', lineHeight: 32, fontWeight: '400' },
 
@@ -1156,14 +1265,14 @@ const s = StyleSheet.create({
   modalBtn:          { minWidth: 64 },
   modalBtnCancel:    { fontSize: 16, color: '#718096' },
   modalTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
-  modalBtnSave:      { fontSize: 16, fontWeight: '700', color: '#6C63FF', textAlign: 'right' },
+  modalBtnSave:      { fontSize: 16, fontWeight: '700', color: '#374151', textAlign: 'right' },
 
   // タブバー
   tabBar:            { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   tabBtn:            { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive:      { borderBottomColor: '#6C63FF' },
+  tabBtnActive:      { borderBottomColor: '#374151' },
   tabBtnText:        { fontSize: 14, fontWeight: '600', color: '#A0AEC0' },
-  tabBtnTextActive:  { color: '#6C63FF' },
+  tabBtnTextActive:  { color: '#374151' },
 
   // テンプレートブラウザ
   searchWrap:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
@@ -1181,23 +1290,23 @@ const s = StyleSheet.create({
   tmplItemIcon:      { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   tmplItemName:      { fontSize: 15, fontWeight: '600', color: '#1A202C' },
   tmplItemMeta:      { fontSize: 12, color: '#A0AEC0', marginTop: 2 },
-  tmplItemAmount:    { fontSize: 14, fontWeight: '700', color: '#6C63FF', marginRight: 4 },
+  tmplItemAmount:    { fontSize: 14, fontWeight: '700', color: '#374151', marginRight: 4 },
   tmplEmpty:         { alignItems: 'center', paddingVertical: 48, gap: 8 },
   tmplEmptyText:     { fontSize: 15, color: '#718096', fontWeight: '600' },
   tmplEmptySubText:  { fontSize: 13, color: '#A0AEC0' },
 
   // プランバッジ
-  planBadge:           { backgroundColor: '#EEF2FF', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, marginRight: 4 },
-  planBadgeText:       { fontSize: 11, fontWeight: '700', color: '#6C63FF' },
+  planBadge:           { backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, marginRight: 4 },
+  planBadgeText:       { fontSize: 11, fontWeight: '700', color: '#374151' },
 
   // 月払い / 年払いボタン
   billingBtns:         { flexDirection: 'row', gap: 5 },
   billingBtn:          { alignItems: 'center', backgroundColor: '#F7F8FC', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: '#E2E8F0', minWidth: 62 },
-  billingBtnYearly:    { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
+  billingBtnYearly:    { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' },
   billingBtnLabel:     { fontSize: 10, fontWeight: '600', color: '#718096', marginBottom: 1 },
-  billingBtnLabelYearly: { color: '#6C63FF' },
+  billingBtnLabelYearly: { color: '#374151' },
   billingBtnAmount:    { fontSize: 12, fontWeight: '700', color: '#1A202C' },
-  billingBtnAmountYearly: { color: '#6C63FF' },
+  billingBtnAmountYearly: { color: '#374151' },
 
   // フォーム
   modalBody:         { padding: 16, gap: 4 },
@@ -1218,21 +1327,25 @@ const s = StyleSheet.create({
   catPanelBackBtn:      { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   catPanelTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
   catPanelRow:          { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', gap: 14 },
-  catPanelRowSelected:  { backgroundColor: '#EEF2FF' },
+  catPanelRowSelected:  { backgroundColor: '#F3F4F6' },
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
-  catPanelRowTextSel:   { color: '#6C63FF', fontWeight: '700' },
+  catPanelRowTextSel:   { color: '#374151', fontWeight: '700' },
 
   // クイック追加パネル
-  qaPanelBody:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
-  qaPanelIcon:      { width: 72, height: 72, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  qaPanelName:      { fontSize: 22, fontWeight: '800', color: '#1A202C', textAlign: 'center' },
-  qaPanelAmount:    { fontSize: 18, fontWeight: '700', color: '#6C63FF', marginBottom: 8 },
-  qaDayPrompt:      { fontSize: 12, fontWeight: '700', color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: 0.5 },
+  qaServiceRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
+  qaServiceName:    { fontSize: 17, fontWeight: '800', color: '#1A202C' },
+  qaServiceAmt:     { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 2 },
+  qaPanelBody:      { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32, gap: 16 },
+  qaPanelIcon:      { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  qaDayPrompt:      { fontSize: 12, fontWeight: '700', color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: 0.5, alignSelf: 'flex-start' },
   qaDayRow:         { flexDirection: 'row', alignItems: 'center', gap: 12 },
   qaDayLabel:       { fontSize: 18, fontWeight: '600', color: '#4A5568' },
-  qaDayInput:       { fontSize: 38, fontWeight: '800', color: '#6C63FF', textAlign: 'center', backgroundColor: '#EEF2FF', borderRadius: 12, paddingVertical: 10, width: 110, borderWidth: 2, borderColor: '#C7D2FE' },
-  qaBtn:            { backgroundColor: '#6C63FF', borderRadius: 14, paddingVertical: 16, marginTop: 12, alignItems: 'center', width: '100%' },
+  qaDayInput:       { fontSize: 38, fontWeight: '800', color: '#374151', textAlign: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 10, width: 110, borderWidth: 2, borderColor: '#D1D5DB' },
+  qaAmountRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 14, borderWidth: 2, borderColor: '#D1D5DB', paddingLeft: 16, overflow: 'hidden', width: '100%' },
+  qaAmountSign:     { fontSize: 28, fontWeight: '700', color: '#4A5568' },
+  qaAmountInput:    { flex: 1, fontSize: 36, fontWeight: '800', color: '#374151', paddingVertical: 12, paddingLeft: 6 },
+  qaBtn:            { backgroundColor: '#374151', borderRadius: 14, paddingVertical: 16, marginTop: 4, alignItems: 'center', width: '100%' },
   qaBtnText:        { fontSize: 17, fontWeight: '700', color: '#fff' },
 
   // 支払スライドパネル
@@ -1240,19 +1353,19 @@ const s = StyleSheet.create({
   payPanelCycleList:  { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#EDF2F7' },
 
   // 支払日パネル
-  dayPanel:           { backgroundColor: '#EEF2FF', borderRadius: 12, padding: 14, marginBottom: 6 },
+  dayPanel:           { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 14, marginBottom: 6 },
   dayPanelSection:    { fontSize: 12, fontWeight: '700', color: '#718096', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-  dayPanelDivider:    { height: 1, backgroundColor: '#C7D2FE', marginVertical: 12 },
+  dayPanelDivider:    { height: 1, backgroundColor: '#D1D5DB', marginVertical: 12 },
   dayRow:             { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dayRowLabel:        { fontSize: 16, fontWeight: '600', color: '#4A5568' },
-  dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#6C63FF', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
+  dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#374151', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
   cycleRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderRadius: 8, gap: 8 },
-  cycleRowSelected:   { backgroundColor: 'rgba(108,99,255,0.08)' },
+  cycleRowSelected:   { backgroundColor: 'rgba(55,65,81,0.08)' },
   cycleRowText:       { flex: 1, fontSize: 15, color: '#CBD5E0', fontWeight: '400' },
-  cycleRowTextSel:    { color: '#6C63FF', fontWeight: '700' },
+  cycleRowTextSel:    { color: '#374151', fontWeight: '700' },
 
   dateSelector:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dateSelectorText:  { fontSize: 16, color: '#1A202C' },
   dateConfirm:       { alignItems: 'flex-end', paddingRight: 4, paddingVertical: 8, marginTop: -8, marginBottom: 8 },
-  dateConfirmText:   { fontSize: 16, color: '#6C63FF', fontWeight: '700' },
+  dateConfirmText:   { fontSize: 16, color: '#374151', fontWeight: '700' },
 });
