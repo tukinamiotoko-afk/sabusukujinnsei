@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ const yen = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
 
 export default function SimulatorScreen() {
   const insets = useSafeAreaInsets();
-  const { expenses } = useExpenses();
+  const { expenses, setExpenses } = useExpenses();
 
   const [targetInput, setTargetInput] = useState('');
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -63,26 +64,36 @@ export default function SimulatorScreen() {
   const toggleCheck = (id: string) => {
     setCheckedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
+  const handleDelete = () => {
+    const count = checkedIds.size;
+    Alert.alert(
+      '削除の確認',
+      `チェックした${count}件を削除しますか？`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: () => {
+            setExpenses(prev => prev.filter(e => !checkedIds.has(e.id)));
+            setCheckedIds(new Set());
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={s.root}>
-      {/* ヘッダー */}
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={s.headerTitle}>削減シミュレーター</Text>
-        <Text style={s.headerSub}>固定費を選んで削減効果を確認</Text>
-      </View>
-
       <ScrollView
         style={s.scrollView}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[s.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + (checkedIds.size > 0 ? 100 : 24) }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -215,6 +226,15 @@ export default function SimulatorScreen() {
           )}
         </View>
       </ScrollView>
+
+      {checkedIds.size > 0 && (
+        <View style={[s.deleteBar, { paddingBottom: insets.bottom + 12 }]}>
+          <TouchableOpacity style={s.deleteBtn} onPress={handleDelete} activeOpacity={0.85}>
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+            <Text style={s.deleteBtnText}>{checkedIds.size}件を削除する</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -223,11 +243,6 @@ export default function SimulatorScreen() {
 
 const s = StyleSheet.create({
   root:             { flex: 1, backgroundColor: '#F5F6FA' },
-
-  // ヘッダー
-  header:           { backgroundColor: '#374151', paddingHorizontal: 20, paddingBottom: 20 },
-  headerTitle:      { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
-  headerSub:        { fontSize: 13, color: 'rgba(255,255,255,0.72)', marginTop: 3 },
 
   // スクロール
   scrollView:       { flex: 1 },
@@ -282,6 +297,11 @@ const s = StyleSheet.create({
   textGreen:        { color: '#48BB78' },
   textOrange:       { color: '#F6AD55' },
   textRed:          { color: '#FC5A5A' },
+
+  // 削除バー
+  deleteBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 20, paddingTop: 12 },
+  deleteBtn:        { backgroundColor: '#FC5A5A', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  deleteBtnText:    { fontSize: 16, fontWeight: '700', color: '#fff' },
 
   // 空状態
   empty:            { alignItems: 'center', paddingVertical: 60, gap: 10, backgroundColor: '#fff', borderRadius: 16 },
