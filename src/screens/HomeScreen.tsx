@@ -14,9 +14,12 @@ import {
   Easing,
   Dimensions,
   Linking,
+  PanResponder,
 } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
+const SWIPE_ACTION_W   = 96;
+const SWIPE_THRESHOLD  = 44;
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -78,47 +81,107 @@ const blankForm = (): FormState => ({
 function ExpenseCard({ expense, onEdit, onDelete }: {
   expense: Expense; onEdit: () => void; onDelete: () => void;
 }) {
-  const { label, color, icon } = CAT[expense.category];
+  const { color, icon } = CAT[expense.category];
   const days = daysUntil(expense.nextDate);
   const overdue = days < 0;
   const soon    = days >= 0 && days <= 7;
+  const isSubscription = expense.category === 'subscription';
+
+  const translateX = useRef(new Animated.Value(0)).current;
+  const openDir    = useRef<'none' | 'left' | 'right'>('none');
+
+  const snapTo = (x: number, dir: 'none' | 'left' | 'right') => {
+    openDir.current = dir;
+    Animated.spring(translateX, {
+      toValue: x, useNativeDriver: true,
+      overshootClamping: true, tension: 100, friction: 9,
+    }).start();
+  };
+  const close = () => snapTo(0, 'none');
+
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) =>
+      Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && Math.abs(g.dx) > 10,
+    onPanResponderMove: (_, g) => {
+      const base = openDir.current === 'right' ? SWIPE_ACTION_W
+                 : openDir.current === 'left'  ? -SWIPE_ACTION_W : 0;
+      let x = base + g.dx;
+      if (!isSubscription) x = Math.max(0, x);
+      translateX.setValue(Math.max(isSubscription ? -SWIPE_ACTION_W : 0, Math.min(SWIPE_ACTION_W, x)));
+    },
+    onPanResponderRelease: (_, g) => {
+      const base = openDir.current === 'right' ? SWIPE_ACTION_W
+                 : openDir.current === 'left'  ? -SWIPE_ACTION_W : 0;
+      const finalX = Math.max(
+        isSubscription ? -SWIPE_ACTION_W : 0,
+        Math.min(SWIPE_ACTION_W, base + g.dx)
+      );
+      if (finalX > SWIPE_THRESHOLD) snapTo(SWIPE_ACTION_W, 'right');
+      else if (finalX < -SWIPE_THRESHOLD && isSubscription) snapTo(-SWIPE_ACTION_W, 'left');
+      else close();
+    },
+  })).current;
+
+  const handleCardPress = () => {
+    if (openDir.current !== 'none') close();
+    else onEdit();
+  };
+
+  const handleDelete = () => {
+    close();
+    setTimeout(() => onDelete(), 220);
+  };
+
+  const handleCancelPage = () => {
+    close();
+    const url = getCancelUrl(expense.name)
+      ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
+    setTimeout(() => Linking.openURL(url), 220);
+  };
 
   return (
-    <TouchableOpacity style={s.card} onPress={onEdit} activeOpacity={0.75}>
-      {hasServiceIcon(expense.name)
-        ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
-        : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon as never} size={22} color={color} />
+    <View style={s.swipeWrap}>
+      {/* 背景アクション: 削除（左側、右スワイプで出現） */}
+      <TouchableOpacity style={s.swipeDeleteAction} onPress={handleDelete} activeOpacity={0.85}>
+        <Ionicons name="trash-outline" size={22} color="#fff" />
+        <Text style={s.swipeActionText}>削除しますか</Text>
+      </TouchableOpacity>
+
+      {/* 背景アクション: 退会（右側、左スワイプで出現・サブスクのみ） */}
+      {isSubscription && (
+        <TouchableOpacity style={s.swipeCancelAction} onPress={handleCancelPage} activeOpacity={0.85}>
+          <Ionicons name="log-out-outline" size={22} color="#fff" />
+          <Text style={s.swipeActionText}>退会しますか</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* スライドするカード */}
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+        <TouchableOpacity style={s.card} onPress={handleCardPress} activeOpacity={0.75}>
+          {hasServiceIcon(expense.name)
+            ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
+            : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
+                <Ionicons name={icon as never} size={22} color={color} />
+              </View>
+          }
+          <View style={s.cardBody}>
+            <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
+            <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
+              {fmtDate(expense.nextDate)}
+              {'  '}
+              {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
+            </Text>
+            {expense.memo ? <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text> : null}
           </View>
-      }
-      <View style={s.cardBody}>
-        <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
-        <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
-          {fmtDate(expense.nextDate)}
-          {'  '}
-          {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
-        </Text>
-        {expense.memo ? <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text> : null}
-      </View>
-      <View style={s.cardRight}>
-        <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
-        <View style={s.cardActions}>
-          <TouchableOpacity
-            onPress={() => {
-              const url = getCancelUrl(expense.name)
-                ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
-              Linking.openURL(url);
-            }}
-            hitSlop={8}
-          >
-            <Ionicons name="log-out-outline" size={16} color="#A0AEC0" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onDelete} hitSlop={8}>
-            <Ionicons name="trash-outline" size={16} color="#FC5A5A" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
+          <View style={s.cardRight}>
+            <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
+            <TouchableOpacity onPress={onEdit} hitSlop={8} style={s.editIconBtn}>
+              <Ionicons name="create-outline" size={18} color="#A0AEC0" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -1261,7 +1324,13 @@ const s = StyleSheet.create({
   listCount:         { fontSize: 13, color: '#A0AEC0' },
   list:              { flex: 1 },
   listContent:       { paddingHorizontal: 16, gap: 8 },
-  card:              { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  // スワイプカード
+  swipeWrap:          { borderRadius: 16, overflow: 'hidden' },
+  swipeDeleteAction:  { position: 'absolute', left: 0, top: 0, bottom: 0, width: SWIPE_ACTION_W, backgroundColor: '#FC5A5A', justifyContent: 'center', alignItems: 'center', gap: 5 },
+  swipeCancelAction:  { position: 'absolute', right: 0, top: 0, bottom: 0, width: SWIPE_ACTION_W, backgroundColor: '#ED8936', justifyContent: 'center', alignItems: 'center', gap: 5 },
+  swipeActionText:    { fontSize: 11, fontWeight: '700', color: '#fff', textAlign: 'center' },
+
+  card:              { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center' },
   cardIcon:          { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   cardBody:          { flex: 1, gap: 3 },
   cardRow:           { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -1276,6 +1345,7 @@ const s = StyleSheet.create({
   cardRight:         { alignItems: 'flex-end', gap: 6, marginLeft: 8 },
   cardAmount:        { fontSize: 16, fontWeight: '800', color: '#1A202C' },
   cardActions:       { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  editIconBtn:       { padding: 2 },
   textRed:           { color: '#FC5A5A' },
   textOrange:        { color: '#FF8C42' },
   empty:             { alignItems: 'center', paddingVertical: 60, gap: 10 },
