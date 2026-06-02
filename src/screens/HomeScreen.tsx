@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Linking,
 } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -104,6 +105,14 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
           {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
         </Text>
         {expense.memo ? <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text> : null}
+        <TouchableOpacity
+          style={s.cancelBtn}
+          onPress={() => Linking.openURL(`https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`)}
+          hitSlop={4}
+        >
+          <Text style={s.cancelBtnText}>退会方法を調べる</Text>
+          <Ionicons name="open-outline" size={11} color="#A0AEC0" />
+        </TouchableOpacity>
       </View>
       <View style={s.cardRight}>
         <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
@@ -1264,6 +1273,8 @@ const s = StyleSheet.create({
   cardName:          { fontSize: 15, fontWeight: '700', color: '#1A202C' },
   cardDate:          { fontSize: 12, color: '#718096' },
   cardMemo:          { fontSize: 11, color: '#A0AEC0' },
+  cancelBtn:         { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2, alignSelf: 'flex-start' },
+  cancelBtnText:     { fontSize: 11, color: '#A0AEC0' },
   cardRight:         { alignItems: 'flex-end', gap: 6, marginLeft: 8 },
   cardAmount:        { fontSize: 16, fontWeight: '800', color: '#1A202C' },
   deleteBtn:         { padding: 4 },
