@@ -835,6 +835,7 @@ function ExpenseModal({
             {quickItem.step === 'payment' && (
               <View style={s.qaPanelBody}>
                 <Text style={s.qaDayPrompt}>毎月の支払日</Text>
+                <Text style={[s.inputHint, { alignSelf: 'flex-start', marginBottom: 8 }]}>毎月決まった日に引き落とされる場合</Text>
                 <View style={s.qaDayRow}>
                   <Text style={s.qaDayLabel}>毎月</Text>
                   <TextInput
@@ -872,6 +873,7 @@ function ExpenseModal({
             {quickItem.step === 'day' && (
               <View style={s.qaPanelBody}>
                 <Text style={s.qaDayPrompt}>毎月の支払日</Text>
+                <Text style={[s.inputHint, { alignSelf: 'flex-start', marginBottom: 8 }]}>毎月同じ日に引き落とされる日付を入力</Text>
                 <View style={s.qaDayRow}>
                   <Text style={s.qaDayLabel}>毎月</Text>
                   <TextInput
@@ -913,6 +915,7 @@ function ExpenseModal({
 
               {/* 毎月の支払日 */}
               <Text style={s.dayPanelSection}>毎月の支払日</Text>
+              <Text style={s.inputHint}>毎月決まった日に引き落とされる場合に入力</Text>
               <View style={s.dayPanel}>
                 <View style={s.dayRow}>
                   <Text style={s.dayRowLabel}>毎月</Text>
@@ -1307,6 +1310,8 @@ const s = StyleSheet.create({
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
   payPanelCycleList:  { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#EDF2F7' },
+
+  inputHint:          { fontSize: 12, color: '#A0AEC0', marginTop: -4, marginBottom: 8 },
 
   // 支払日パネル
   dayPanel:           { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 14, marginBottom: 6 },
