@@ -928,27 +928,33 @@ export default function HomeScreen() {
     return () => animVal.removeListener(id);
   }, []);
 
-  // タブに戻ってきた時: 0 からカウントアップ
+  // タブに戻ってきた時: ディレイ後に 0 からカウントアップ
   useFocusEffect(
     useCallback(() => {
       animVal.setValue(0);
-      Animated.timing(animVal, {
-        toValue: monthlyTotalRef.current,
-        duration: 900,
-        useNativeDriver: false,
-      }).start();
+      Animated.sequence([
+        Animated.delay(400),
+        Animated.timing(animVal, {
+          toValue: monthlyTotalRef.current,
+          duration: 900,
+          useNativeDriver: false,
+        }),
+      ]).start();
     }, [])
   );
 
-  // 金額が変わった時: 現在値から増減アニメーション
+  // 金額が変わった時: ディレイ後に増減アニメーション
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
-    Animated.timing(animVal, {
-      toValue: monthlyTotal,
-      duration: 500,
-      useNativeDriver: false,
-    }).start();
+    Animated.sequence([
+      Animated.delay(250),
+      Animated.timing(animVal, {
+        toValue: monthlyTotal,
+        duration: 500,
+        useNativeDriver: false,
+      }),
+    ]).start();
   }, [monthlyTotal]);
 
   const sorted = [...expenses].sort(
