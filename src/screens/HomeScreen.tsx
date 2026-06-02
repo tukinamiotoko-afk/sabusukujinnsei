@@ -931,52 +931,12 @@ function ExpenseModal({
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closePayPanel} activeOpacity={0.7}>
                 <Ionicons name="chevron-back" size={22} color="#374151" />
               </TouchableOpacity>
-              <Text style={s.catPanelTitle}>支払日または支払周期</Text>
+              <Text style={s.catPanelTitle}>支払周期と支払日</Text>
               <View style={{ width: 44 }} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.payPanelContent}>
 
-              {/* 毎月払いの場合 */}
-              <Text style={s.dayPanelSection}>毎月払いの場合</Text>
-              <View style={s.dayPanel}>
-                <View style={s.dayRow}>
-                  <Text style={s.dayRowLabel}>毎月</Text>
-                  <TextInput
-                    style={s.dayNumInput}
-                    value={dayInput}
-                    onChangeText={handleDay}
-                    placeholder="15"
-                    placeholderTextColor="#CBD5E0"
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                  <Text style={s.dayRowLabel}>日払い</Text>
-                </View>
-              </View>
-
-              {/* 手入力 */}
-              <Text style={[s.dayPanelSection, { marginTop: 16 }]}>カスタム間隔（手入力）</Text>
-              <View style={s.dayPanel}>
-                <View style={s.dayRow}>
-                  <TextInput
-                    style={[s.dayNumInput, { width: 100 }]}
-                    value={form.customCycleDays}
-                    onChangeText={v => setForm(f => ({
-                      ...f,
-                      customCycleDays: v.replace(/[^0-9]/g, ''),
-                      cycle: 'custom',
-                    }))}
-                    placeholder="30"
-                    placeholderTextColor="#CBD5E0"
-                    keyboardType="number-pad"
-                  />
-                  <Text style={s.dayRowLabel}>日ごと</Text>
-                </View>
-              </View>
-
-              <View style={s.dayPanelDivider} />
-
-              {/* 支払周期プリセット */}
+              {/* 支払周期リスト */}
               <Text style={s.dayPanelSection}>支払周期</Text>
               <View style={s.payPanelCycleList}>
                 {CYCLES.map(cycle => {
@@ -985,10 +945,7 @@ function ExpenseModal({
                     <TouchableOpacity
                       key={cycle}
                       style={[s.cycleRow, sel && s.cycleRowSelected]}
-                      onPress={() => {
-                        setForm(f => ({ ...f, cycle }));
-                        closePayPanel();
-                      }}
+                      onPress={() => setForm(f => ({ ...f, cycle }))}
                       activeOpacity={0.7}
                     >
                       <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>
@@ -999,6 +956,57 @@ function ExpenseModal({
                   );
                 })}
               </View>
+
+              {/* 毎月：支払日入力 */}
+              {form.cycle === 'monthly' && (
+                <>
+                  <View style={s.dayPanelDivider} />
+                  <Text style={s.dayPanelSection}>毎月の支払日</Text>
+                  <View style={s.dayPanel}>
+                    <View style={s.dayRow}>
+                      <Text style={s.dayRowLabel}>毎月</Text>
+                      <TextInput
+                        style={s.dayNumInput}
+                        value={dayInput}
+                        onChangeText={handleDay}
+                        placeholder="15"
+                        placeholderTextColor="#CBD5E0"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                      />
+                      <Text style={s.dayRowLabel}>日払い</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* カスタム：間隔入力 */}
+              {form.cycle === 'custom' && (
+                <>
+                  <View style={s.dayPanelDivider} />
+                  <Text style={s.dayPanelSection}>間隔（日数）</Text>
+                  <View style={s.dayPanel}>
+                    <View style={s.dayRow}>
+                      <TextInput
+                        style={[s.dayNumInput, { width: 100 }]}
+                        value={form.customCycleDays}
+                        onChangeText={v => setForm(f => ({
+                          ...f,
+                          customCycleDays: v.replace(/[^0-9]/g, ''),
+                        }))}
+                        placeholder="30"
+                        placeholderTextColor="#CBD5E0"
+                        keyboardType="number-pad"
+                      />
+                      <Text style={s.dayRowLabel}>日ごと</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={closePayPanel} activeOpacity={0.85}>
+                <Text style={s.qaBtnText}>完了</Text>
+              </TouchableOpacity>
             </ScrollView>
           </Animated.View>
         )}
