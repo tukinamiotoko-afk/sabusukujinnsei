@@ -35,7 +35,7 @@ import {
   type Cycle,
   type Expense,
 } from '../context/ExpensesContext';
-import { TEMPLATES, type TemplateItem } from '../data/templates';
+import { TEMPLATES, SUBSCRIPTION_SUBCATS, type TemplateItem } from '../data/templates';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
@@ -183,6 +183,7 @@ function TemplateBrowser({ onDirectAdd }: {
 }) {
   const [search, setSearch]         = useState('');
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
+  const [activeSubcat, setActiveSubcat]     = useState<string | null>(null);
   const [activeGroup, setActiveGroup]       = useState<string | null>(null);
 
   const searchResults = useMemo(() => {
@@ -311,19 +312,41 @@ function TemplateBrowser({ onDirectAdd }: {
     );
   }
 
-  // Level 2: サービス一覧
-  if (activeCategory !== null) {
+  // Level 2: サービス一覧（subscription はサブカテゴリでフィルタ）
+  if (activeCategory !== null && (activeCategory !== 'subscription' || activeSubcat !== null)) {
     const { label, color, icon } = CAT[activeCategory];
-    const entries = buildServiceEntries(TEMPLATES[activeCategory]);
+    const sourceItems = activeCategory === 'subscription' && activeSubcat !== null
+      ? TEMPLATES['subscription'].filter(i => i.subcat === activeSubcat)
+      : TEMPLATES[activeCategory];
+    const entries = buildServiceEntries(sourceItems);
+    const backLabel = activeCategory === 'subscription' && activeSubcat !== null
+      ? SUBSCRIPTION_SUBCATS[activeSubcat]?.label ?? label
+      : label;
+    const backColor = activeCategory === 'subscription' && activeSubcat !== null
+      ? SUBSCRIPTION_SUBCATS[activeSubcat]?.color ?? color
+      : color;
+    const backIcon = activeCategory === 'subscription' && activeSubcat !== null
+      ? SUBSCRIPTION_SUBCATS[activeSubcat]?.icon ?? icon
+      : icon;
     return (
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
-        <TouchableOpacity style={s.tmplBack} onPress={() => { setActiveCategory(null); setActiveGroup(null); }}>
+        <TouchableOpacity
+          style={s.tmplBack}
+          onPress={() => {
+            if (activeCategory === 'subscription') {
+              setActiveSubcat(null);
+            } else {
+              setActiveCategory(null);
+              setActiveGroup(null);
+            }
+          }}
+        >
           <Ionicons name="chevron-back" size={18} color="#374151" />
-          <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon as never} size={14} color={color} />
+          <View style={[s.tmplBackIcon, { backgroundColor: backColor + '20' }]}>
+            <Ionicons name={backIcon as never} size={14} color={backColor} />
           </View>
-          <Text style={s.tmplBackLabel}>{label}</Text>
+          <Text style={s.tmplBackLabel}>{backLabel}</Text>
         </TouchableOpacity>
         <ScrollView keyboardShouldPersistTaps="handled">
           {entries.map((entry, i) => {
@@ -372,6 +395,42 @@ function TemplateBrowser({ onDirectAdd }: {
     );
   }
 
+  // Level 1.5: サブスク サブカテゴリグリッド
+  if (activeCategory === 'subscription' && activeSubcat === null) {
+    const { label, color, icon } = CAT['subscription'];
+    return (
+      <View style={{ flex: 1 }}>
+        {renderSearchBar(false)}
+        <TouchableOpacity style={s.tmplBack} onPress={() => { setActiveCategory(null); setActiveGroup(null); }}>
+          <Ionicons name="chevron-back" size={18} color="#374151" />
+          <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
+            <Ionicons name={icon as never} size={14} color={color} />
+          </View>
+          <Text style={s.tmplBackLabel}>{label}</Text>
+        </TouchableOpacity>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplCatGrid}>
+          {Object.entries(SUBSCRIPTION_SUBCATS).map(([key, cfg]) => {
+            const count = TEMPLATES['subscription'].filter(i => i.subcat === key).length;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={s.tmplCatCard}
+                onPress={() => setActiveSubcat(key)}
+                activeOpacity={0.75}
+              >
+                <View style={[s.tmplCatIcon, { backgroundColor: cfg.color + '20' }]}>
+                  <Ionicons name={cfg.icon as never} size={26} color={cfg.color} />
+                </View>
+                <Text style={s.tmplCatLabel}>{cfg.label}</Text>
+                <Text style={s.tmplCatCount}>{count}件</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
   // Level 1: カテゴリグリッド
   return (
     <View style={{ flex: 1 }}>
@@ -384,7 +443,7 @@ function TemplateBrowser({ onDirectAdd }: {
             <TouchableOpacity
               key={cat}
               style={s.tmplCatCard}
-              onPress={() => { setActiveCategory(cat); setActiveGroup(null); }}
+              onPress={() => { setActiveCategory(cat); setActiveSubcat(null); setActiveGroup(null); }}
               activeOpacity={0.75}
             >
               <View style={[s.tmplCatIcon, { backgroundColor: color + '20' }]}>
