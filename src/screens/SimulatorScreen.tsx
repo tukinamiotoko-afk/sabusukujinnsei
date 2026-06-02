@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   Animated,
+  Easing,
   Dimensions,
   Linking,
 } from 'react-native';
@@ -58,6 +59,24 @@ export default function SimulatorScreen() {
     () => checkedExpenses.reduce((sum, { monthly }) => sum + monthly, 0),
     [checkedExpenses]
   );
+
+  // 月額合計のアニメーション
+  const animTotal = useRef(new Animated.Value(0)).current;
+  const [dispTotal, setDispTotal] = useState(0);
+
+  useEffect(() => {
+    const id = animTotal.addListener(({ value }) => setDispTotal(Math.round(value)));
+    return () => animTotal.removeListener(id);
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(animTotal, {
+      toValue: totalMonthly - totalReduction,
+      duration: 400,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    }).start();
+  }, [totalMonthly, totalReduction]);
 
   const toggleCheck = (id: string) => {
     setCheckedIds(prev => {
@@ -142,7 +161,9 @@ export default function SimulatorScreen() {
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>月額合計</Text>
             <View style={s.summaryAmountRow}>
-              <Text style={s.summaryAmount}>{yen(Math.round(totalMonthly))}</Text>
+              <Text style={[s.summaryAmount, checkedIds.size > 0 && s.summaryAmountReducing]}>
+                {yen(dispTotal)}
+              </Text>
               <Text style={s.summarySub}>/月</Text>
             </View>
           </View>
@@ -153,13 +174,6 @@ export default function SimulatorScreen() {
                 <Text style={s.reductionLabel}>削減合計 ({checkedIds.size}件)</Text>
                 <View style={s.summaryAmountRow}>
                   <Text style={s.reductionAmount}>-{yen(Math.round(totalReduction))}</Text>
-                  <Text style={s.summarySub}>/月</Text>
-                </View>
-              </View>
-              <View style={s.summaryRow}>
-                <Text style={s.afterLabel}>削減後</Text>
-                <View style={s.summaryAmountRow}>
-                  <Text style={s.afterAmount}>{yen(Math.round(totalMonthly - totalReduction))}</Text>
                   <Text style={s.summarySub}>/月</Text>
                 </View>
               </View>
@@ -349,14 +363,13 @@ const s = StyleSheet.create({
   summaryRow:       { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   summaryAmountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
   summaryLabel:     { fontSize: 13, color: '#718096', fontWeight: '600' },
-  summaryAmount:    { fontSize: 28, fontWeight: '800', color: '#1A202C' },
+  summaryAmount:         { fontSize: 28, fontWeight: '800', color: '#1A202C' },
+  summaryAmountReducing: { color: '#FC5A5A' },
   summarySub:       { fontSize: 13, color: '#A0AEC0' },
   reductionRow:     { gap: 6, marginTop: 10 },
   reductionDivider: { height: 1, backgroundColor: '#EDF2F7', marginBottom: 4 },
   reductionLabel:   { fontSize: 13, color: '#FC5A5A', fontWeight: '600' },
   reductionAmount:  { fontSize: 22, fontWeight: '800', color: '#FC5A5A' },
-  afterLabel:       { fontSize: 13, color: '#38A169', fontWeight: '600' },
-  afterAmount:      { fontSize: 22, fontWeight: '800', color: '#38A169' },
 
   // ボトムバー
   bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 12, flexDirection: 'row', gap: 10 },

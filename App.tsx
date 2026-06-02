@@ -37,7 +37,7 @@ function TabNavigator() {
           } else if (route.name === 'カレンダー') {
             iconName = focused ? 'calendar' : 'calendar-outline';
           } else {
-            iconName = focused ? 'calculator' : 'calculator-outline';
+            iconName = focused ? 'trash' : 'trash-outline';
           }
           return <Ionicons name={iconName as never} size={size} color={color} />;
         },
@@ -45,7 +45,7 @@ function TabNavigator() {
     >
       <Tab.Screen name="一覧" component={HomeScreen} />
       <Tab.Screen name="カレンダー" component={CalendarScreen} />
-      <Tab.Screen name="シミュレーター" component={SimulatorScreen} />
+      <Tab.Screen name="一括削除" component={SimulatorScreen} />
     </Tab.Navigator>
   );
 }
