@@ -11,6 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Animated,
+  Easing,
   Dimensions,
 } from 'react-native';
 
@@ -1004,29 +1005,25 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       animVal.setValue(0);
-      Animated.sequence([
-        Animated.delay(400),
-        Animated.timing(animVal, {
-          toValue: monthlyTotalRef.current,
-          duration: 900,
-          useNativeDriver: false,
-        }),
-      ]).start();
+      Animated.timing(animVal, {
+        toValue: monthlyTotalRef.current,
+        duration: 1000,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: false,
+      }).start();
     }, [])
   );
 
-  // 金額が変わった時: ディレイ後に増減アニメーション
+  // 金額が変わった時: イーズインで増減アニメーション
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
-    Animated.sequence([
-      Animated.delay(250),
-      Animated.timing(animVal, {
-        toValue: monthlyTotal,
-        duration: 500,
-        useNativeDriver: false,
-      }),
-    ]).start();
+    Animated.timing(animVal, {
+      toValue: monthlyTotal,
+      duration: 600,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: false,
+    }).start();
   }, [monthlyTotal]);
 
   const sorted = [...expenses].sort(
