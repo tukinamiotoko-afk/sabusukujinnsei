@@ -5,7 +5,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/sabusukujinsei_aikon.png",
-    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/sabusukujinsei_aikon.png",
       "resizeMode": "contain",
