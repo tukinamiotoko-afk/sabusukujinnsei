@@ -92,12 +92,6 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
           </View>
       }
       <View style={s.cardBody}>
-        <View style={s.cardRow}>
-          <View style={[s.catBadge, { backgroundColor: color + '18' }]}>
-            <Text style={[s.catBadgeText, { color }]}>{label}</Text>
-          </View>
-          <Text style={s.cycleBadge}>{cycleDisplay(expense.cycle, expense.customCycleDays)}</Text>
-        </View>
         <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
         <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
           {fmtDate(expense.nextDate)}
@@ -105,26 +99,24 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
           {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
         </Text>
         {expense.memo ? <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text> : null}
-        <TouchableOpacity
-          style={s.cancelBtn}
-          onPress={() => {
-            const url = getCancelUrl(expense.name)
-              ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
-            Linking.openURL(url);
-          }}
-          hitSlop={4}
-        >
-          <Text style={s.cancelBtnText}>
-            {getCancelUrl(expense.name) ? '公式退会ページ' : '退会方法を調べる'}
-          </Text>
-          <Ionicons name="open-outline" size={11} color="#A0AEC0" />
-        </TouchableOpacity>
       </View>
       <View style={s.cardRight}>
         <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
-        <TouchableOpacity onPress={onDelete} hitSlop={8} style={s.deleteBtn}>
-          <Ionicons name="trash-outline" size={16} color="#FC5A5A" />
-        </TouchableOpacity>
+        <View style={s.cardActions}>
+          <TouchableOpacity
+            onPress={() => {
+              const url = getCancelUrl(expense.name)
+                ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
+              Linking.openURL(url);
+            }}
+            hitSlop={8}
+          >
+            <Ionicons name="log-out-outline" size={16} color="#A0AEC0" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onDelete} hitSlop={8}>
+            <Ionicons name="trash-outline" size={16} color="#FC5A5A" />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -1283,7 +1275,7 @@ const s = StyleSheet.create({
   cancelBtnText:     { fontSize: 11, color: '#A0AEC0' },
   cardRight:         { alignItems: 'flex-end', gap: 6, marginLeft: 8 },
   cardAmount:        { fontSize: 16, fontWeight: '800', color: '#1A202C' },
-  deleteBtn:         { padding: 4 },
+  cardActions:       { flexDirection: 'row', gap: 12, alignItems: 'center' },
   textRed:           { color: '#FC5A5A' },
   textOrange:        { color: '#FF8C42' },
   empty:             { alignItems: 'center', paddingVertical: 60, gap: 10 },
