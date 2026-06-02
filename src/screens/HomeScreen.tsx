@@ -83,9 +83,12 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
 
   return (
     <TouchableOpacity style={s.card} onPress={onEdit} activeOpacity={0.75}>
-      <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon as never} size={22} color={color} />
-      </View>
+      {hasServiceIcon(expense.name)
+        ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
+        : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
+            <Ionicons name={icon as never} size={22} color={color} />
+          </View>
+      }
       <View style={s.cardBody}>
         <View style={s.cardRow}>
           <View style={[s.catBadge, { backgroundColor: color + '18' }]}>
