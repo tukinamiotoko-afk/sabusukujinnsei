@@ -128,17 +128,15 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
     if (openDir.current !== 'none') close();
   };
 
-  const handleDelete = () => {
-    close();
-    setTimeout(() => onDelete(), 220);
-  };
-
-  const handleCancelPage = () => {
-    close();
+  const openCancelUrl = () => {
     const url = getCancelUrl(expense.name)
       ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
-    setTimeout(() => Linking.openURL(url), 220);
+    Linking.openURL(url);
   };
+
+  // スワイプ背景ボタン用（閉じてから実行）
+  const handleDelete = () => { close(); setTimeout(() => onDelete(), 220); };
+  const handleCancelPage = () => { close(); setTimeout(openCancelUrl, 220); };
 
   return (
     <View style={s.swipeWrap}>
@@ -176,9 +174,19 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
           </View>
           <View style={s.cardRight}>
             <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
-            <TouchableOpacity onPress={onEdit} hitSlop={8} style={s.editIconBtn}>
-              <Feather name="edit-2" size={17} color="#718096" />
-            </TouchableOpacity>
+            <View style={s.cardActions}>
+              {isSubscription && (
+                <TouchableOpacity onPress={openCancelUrl} hitSlop={8} style={s.cardActionBtn}>
+                  <Ionicons name="log-out-outline" size={16} color="#A0AEC0" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={onDelete} hitSlop={8} style={s.cardActionBtn}>
+                <Ionicons name="trash-outline" size={16} color="#FC5A5A" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onEdit} hitSlop={8} style={s.editIconBtn}>
+                <Feather name="edit-2" size={16} color="#A0AEC0" />
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -1358,7 +1366,8 @@ const s = StyleSheet.create({
   cancelBtnText:     { fontSize: 11, color: '#A0AEC0' },
   cardRight:         { alignItems: 'flex-end', gap: 6, marginLeft: 8 },
   cardAmount:        { fontSize: 16, fontWeight: '800', color: '#1A202C' },
-  cardActions:       { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  cardActions:       { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  cardActionBtn:     { padding: 2 },
   editIconBtn:       { padding: 2 },
   textRed:           { color: '#FC5A5A' },
   textOrange:        { color: '#FF8C42' },
