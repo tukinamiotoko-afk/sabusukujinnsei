@@ -49,6 +49,11 @@ export default function SimulatorScreen() {
     [sortedExpenses, checkedIds]
   );
 
+  const totalMonthly = useMemo(
+    () => sortedExpenses.reduce((sum, { monthly }) => sum + monthly, 0),
+    [sortedExpenses]
+  );
+
   const totalReduction = useMemo(
     () => checkedExpenses.reduce((sum, { monthly }) => sum + monthly, 0),
     [checkedExpenses]
@@ -128,10 +133,40 @@ export default function SimulatorScreen() {
         style={s.scrollView}
         contentContainerStyle={[s.scrollContent, {
           paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + (checkedIds.size > 0 ? 140 : 24),
+          paddingBottom: insets.bottom + (checkedIds.size > 0 ? 110 : 24),
         }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── 合計カード ── */}
+        <View style={s.summaryCard}>
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>月額合計</Text>
+            <View style={s.summaryAmountRow}>
+              <Text style={s.summaryAmount}>{yen(Math.round(totalMonthly))}</Text>
+              <Text style={s.summarySub}>/月</Text>
+            </View>
+          </View>
+          {checkedIds.size > 0 && (
+            <View style={s.reductionRow}>
+              <View style={s.reductionDivider} />
+              <View style={s.summaryRow}>
+                <Text style={s.reductionLabel}>削減合計 ({checkedIds.size}件)</Text>
+                <View style={s.summaryAmountRow}>
+                  <Text style={s.reductionAmount}>-{yen(Math.round(totalReduction))}</Text>
+                  <Text style={s.summarySub}>/月</Text>
+                </View>
+              </View>
+              <View style={s.summaryRow}>
+                <Text style={s.afterLabel}>削減後</Text>
+                <View style={s.summaryAmountRow}>
+                  <Text style={s.afterAmount}>{yen(Math.round(totalMonthly - totalReduction))}</Text>
+                  <Text style={s.summarySub}>/月</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
         <View style={s.listSection}>
           <View style={s.listHeader}>
             <Text style={s.listTitle}>固定費一覧</Text>
@@ -184,19 +219,13 @@ export default function SimulatorScreen() {
       {/* ── ボトムバー ── */}
       {checkedIds.size > 0 && (
         <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
-          <View style={s.bottomBarTop}>
-            <Text style={s.reductionLabel}>削減合計</Text>
-            <Text style={s.reductionAmount}>{yen(Math.round(totalReduction))}<Text style={s.reductionSub}>/月</Text></Text>
-          </View>
-          <View style={s.bottomBarBtns}>
-            <TouchableOpacity style={s.cancelFlowBtn} onPress={openCancelFlow} activeOpacity={0.85}>
-              <Ionicons name="log-out-outline" size={18} color="#fff" />
-              <Text style={s.cancelFlowBtnText}>{checkedIds.size}件を退会する</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.quickDeleteBtn} onPress={handleQuickDelete} activeOpacity={0.85}>
-              <Ionicons name="trash-outline" size={18} color="#FC5A5A" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={s.cancelFlowBtn} onPress={openCancelFlow} activeOpacity={0.85}>
+            <Ionicons name="log-out-outline" size={18} color="#fff" />
+            <Text style={s.cancelFlowBtnText}>{checkedIds.size}件を退会する</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.quickDeleteBtn} onPress={handleQuickDelete} activeOpacity={0.85}>
+            <Ionicons name="trash-outline" size={18} color="#FC5A5A" />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -315,13 +344,22 @@ const s = StyleSheet.create({
   checkboxChecked:  { backgroundColor: '#FC5A5A', borderColor: '#FC5A5A' },
   catIcon:          { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
+  // 合計カード
+  summaryCard:      { backgroundColor: '#fff', borderRadius: 16, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  summaryRow:       { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  summaryAmountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
+  summaryLabel:     { fontSize: 13, color: '#718096', fontWeight: '600' },
+  summaryAmount:    { fontSize: 28, fontWeight: '800', color: '#1A202C' },
+  summarySub:       { fontSize: 13, color: '#A0AEC0' },
+  reductionRow:     { gap: 6, marginTop: 10 },
+  reductionDivider: { height: 1, backgroundColor: '#EDF2F7', marginBottom: 4 },
+  reductionLabel:   { fontSize: 13, color: '#FC5A5A', fontWeight: '600' },
+  reductionAmount:  { fontSize: 22, fontWeight: '800', color: '#FC5A5A' },
+  afterLabel:       { fontSize: 13, color: '#38A169', fontWeight: '600' },
+  afterAmount:      { fontSize: 22, fontWeight: '800', color: '#38A169' },
+
   // ボトムバー
-  bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 10, gap: 8 },
-  bottomBarTop:     { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  bottomBarBtns:    { flexDirection: 'row', gap: 10 },
-  reductionLabel:   { fontSize: 13, color: '#718096', fontWeight: '600' },
-  reductionAmount:  { fontSize: 20, fontWeight: '800', color: '#FC5A5A' },
-  reductionSub:     { fontSize: 12, fontWeight: '400', color: '#A0AEC0' },
+  bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 12, flexDirection: 'row', gap: 10 },
   cancelFlowBtn:    { flex: 1, backgroundColor: '#374151', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   cancelFlowBtnText:{ fontSize: 16, fontWeight: '700', color: '#fff' },
   quickDeleteBtn:   { width: 52, height: 52, borderRadius: 14, borderWidth: 1.5, borderColor: '#FC5A5A', justifyContent: 'center', alignItems: 'center' },
