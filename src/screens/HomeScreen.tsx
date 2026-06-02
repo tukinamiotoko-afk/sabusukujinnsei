@@ -655,7 +655,7 @@ function ExpenseModal({
       let y = today.getFullYear(), m = today.getMonth();
       const candidate = new Date(y, m, n);
       if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
-      setForm(f => ({ ...f, cycle: 'monthly', nextDate: new Date(y, m, n) }));
+      setForm(f => ({ ...f, cycle: 'monthly', nextDate: new Date(y, m, n), customCycleDays: '' }));
     }
   };
 
@@ -840,7 +840,7 @@ function ExpenseModal({
                   <TextInput
                     style={s.qaDayInput}
                     value={quickItem.tempDay}
-                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
+                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2), tempCustomDays: '' }))}
                     placeholder="15"
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
@@ -855,7 +855,7 @@ function ExpenseModal({
                   <TextInput
                     style={[s.qaDayInput, { width: 110 }]}
                     value={quickItem.tempCustomDays}
-                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempCustomDays: v.replace(/[^0-9]/g, '') }))}
+                    onChangeText={v => setQuickItem(q => q && ({ ...q, tempCustomDays: v.replace(/[^0-9]/g, ''), tempDay: '' }))}
                     placeholder="30"
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
@@ -938,11 +938,14 @@ function ExpenseModal({
                   <TextInput
                     style={[s.dayNumInput, { width: 110 }]}
                     value={form.customCycleDays}
-                    onChangeText={v => setForm(f => ({
-                      ...f,
-                      customCycleDays: v.replace(/[^0-9]/g, ''),
-                      cycle: 'custom',
-                    }))}
+                    onChangeText={v => {
+                      setDayInput('');
+                      setForm(f => ({
+                        ...f,
+                        customCycleDays: v.replace(/[^0-9]/g, ''),
+                        cycle: 'custom',
+                      }));
+                    }}
                     placeholder="30"
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
@@ -1101,12 +1104,11 @@ export default function HomeScreen() {
       >
         <View style={s.summaryNew}>
           <Text style={s.summaryMonthLabel}>月額見込み</Text>
-          <Text style={s.summaryMonthVal}>{yen(dispMonthly)}</Text>
-          <View style={s.summaryFootRow}>
+          <View style={s.summaryMainRow}>
+            <Text style={s.summaryMonthVal}>{yen(dispMonthly)}</Text>
             <Text style={s.summaryAnnualTxt}>年間 {yen(dispAnnual)}</Text>
-            <View style={s.summaryDot} />
-            <Text style={s.summaryCountTxt}>{expenses.length}件登録</Text>
           </View>
+          <Text style={s.summaryCountTxt}>{expenses.length}件登録</Text>
         </View>
       </LinearGradient>
 
@@ -1175,11 +1177,10 @@ const s = StyleSheet.create({
   appSub:            { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2, marginBottom: 16 },
   summaryNew:        { marginTop: 12 },
   summaryMonthLabel: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600', letterSpacing: 0.5, marginBottom: 4 },
+  summaryMainRow:    { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   summaryMonthVal:   { fontSize: 46, fontWeight: '800', color: '#fff', letterSpacing: -1 },
-  summaryFootRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
-  summaryAnnualTxt:  { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
-  summaryDot:        { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.4)' },
-  summaryCountTxt:   { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
+  summaryAnnualTxt:  { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600', paddingBottom: 6 },
+  summaryCountTxt:   { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginTop: 4 },
   nextBox:           { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   nextLabel:         { fontSize: 11, fontWeight: '700', color: '#A0AEC0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   nextRow:           { flexDirection: 'row', alignItems: 'center', gap: 8 },
