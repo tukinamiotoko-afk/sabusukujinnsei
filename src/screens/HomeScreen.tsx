@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
 
 const SCREEN_W = Dimensions.get('window').width;
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -808,6 +809,45 @@ export default function HomeScreen() {
     (sum, e) => sum + monthlyEq(e.amount, e.cycle, e.customCycleDays), 0
   );
   const annualTotal = monthlyTotal * 12;
+
+  // カウントアップ/ダウンアニメーション
+  const animVal           = useRef(new Animated.Value(0)).current;
+  const monthlyTotalRef   = useRef(monthlyTotal);
+  monthlyTotalRef.current = monthlyTotal;
+  const [dispMonthly, setDispMonthly] = useState(0);
+  const [dispAnnual,  setDispAnnual]  = useState(0);
+
+  useEffect(() => {
+    const id = animVal.addListener(({ value }) => {
+      setDispMonthly(Math.round(value));
+      setDispAnnual(Math.round(value * 12));
+    });
+    return () => animVal.removeListener(id);
+  }, []);
+
+  // タブに戻ってきた時: 0 からカウントアップ
+  useFocusEffect(
+    useCallback(() => {
+      animVal.setValue(0);
+      Animated.timing(animVal, {
+        toValue: monthlyTotalRef.current,
+        duration: 900,
+        useNativeDriver: false,
+      }).start();
+    }, [])
+  );
+
+  // 金額が変わった時: 現在値から増減アニメーション
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    Animated.timing(animVal, {
+      toValue: monthlyTotal,
+      duration: 500,
+      useNativeDriver: false,
+    }).start();
+  }, [monthlyTotal]);
+
   const sorted = [...expenses].sort(
     (a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime()
   );
@@ -896,18 +936,17 @@ export default function HomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <Text style={s.appSub}>{format(new Date(), 'yyyy年M月', { locale: ja })}</Text>
         <View style={s.summaryBox}>
           <View style={s.summaryItem}>
             <Text style={s.summaryLabel}>月額見込み</Text>
-            <Text style={s.summaryValue}>{yen(monthlyTotal)}</Text>
+            <Text style={s.summaryValue}>{yen(dispMonthly)}</Text>
             <Text style={s.summaryNote}>{expenses.length}件登録</Text>
           </View>
           <View style={s.summaryDivider} />
           <View style={s.summaryItem}>
             <Text style={s.summaryLabel}>年間見込み</Text>
-            <Text style={s.summaryValue}>{yen(annualTotal)}</Text>
-            <Text style={s.summaryNote}>月平均 {yen(annualTotal / 12)}</Text>
+            <Text style={s.summaryValue}>{yen(dispAnnual)}</Text>
+            <Text style={s.summaryNote}>月平均 {yen(dispMonthly)}</Text>
           </View>
         </View>
       </LinearGradient>
