@@ -852,6 +852,7 @@ function ExpenseModal({
                 </View>
                 <View style={[s.dayPanelDivider, { width: '100%' }]} />
                 <Text style={s.qaDayPrompt}>支払周期</Text>
+                <Text style={[s.inputHint, { alignSelf: 'flex-start', marginBottom: 8 }]}>引き落とし間隔を日数で入力（例: 30・60・90）</Text>
                 <View style={s.qaDayRow}>
                   <TextInput
                     style={[s.qaDayInput, { width: 110 }]}
@@ -936,6 +937,7 @@ function ExpenseModal({
 
               {/* 支払周期（日数入力） */}
               <Text style={s.dayPanelSection}>支払周期</Text>
+              <Text style={s.inputHint}>引き落とし間隔を日数で入力（例: 30・60・90）</Text>
               <View style={s.dayPanel}>
                 <View style={s.dayRow}>
                   <TextInput
