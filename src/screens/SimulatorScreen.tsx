@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Animated,
+  Dimensions,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,76 +16,106 @@ import {
   useExpenses,
   CAT,
   monthlyEq,
-  cycleDisplay,
-  CATEGORIES,
-  type Category,
   type Expense,
 } from '../context/ExpensesContext';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
+import { getCancelUrl } from '../data/templates';
 
-// ─── ユーティリティ ──────────────────────────────────────────────────────────
-
+const SCREEN_W = Dimensions.get('window').width;
 const yen = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
-
-// ─── SimulatorScreen ─────────────────────────────────────────────────────────
 
 export default function SimulatorScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, setExpenses } = useExpenses();
 
-  const [targetInput, setTargetInput] = useState('');
-  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [checkedIds,    setCheckedIds]    = useState<Set<string>>(new Set());
+  const [cancelDoneIds, setCancelDoneIds] = useState<Set<string>>(new Set());
+  const slideAnim = useRef(new Animated.Value(SCREEN_W)).current;
+  const [cancelMode, setCancelMode] = useState(false);
 
-  const targetAmount = parseInt(targetInput.replace(/[^0-9]/g, ''), 10) || 0;
-
-  // 月額換算、irregular は 0 として末尾に
   const sortedExpenses = useMemo(() => {
-    const withMonthly = expenses.map(e => ({
-      expense: e,
-      monthly: monthlyEq(e.amount, e.cycle, e.customCycleDays),
-    }));
-    return withMonthly.sort((a, b) => {
-      if (a.monthly === 0 && b.monthly === 0) return 0;
-      if (a.monthly === 0) return 1;
-      if (b.monthly === 0) return -1;
-      return b.monthly - a.monthly;
-    });
+    return expenses
+      .map(e => ({ expense: e, monthly: monthlyEq(e.amount, e.cycle, e.customCycleDays) }))
+      .sort((a, b) => {
+        if (a.monthly === 0 && b.monthly === 0) return 0;
+        if (a.monthly === 0) return 1;
+        if (b.monthly === 0) return -1;
+        return b.monthly - a.monthly;
+      });
   }, [expenses]);
 
-  const totalReduction = useMemo(() => {
-    return sortedExpenses
-      .filter(({ expense }) => checkedIds.has(expense.id))
-      .reduce((sum, { monthly }) => sum + monthly, 0);
-  }, [sortedExpenses, checkedIds]);
+  const checkedExpenses = useMemo(
+    () => sortedExpenses.filter(({ expense }) => checkedIds.has(expense.id)),
+    [sortedExpenses, checkedIds]
+  );
 
-  const remaining = targetAmount - totalReduction;
-  const achieved = targetAmount > 0 && totalReduction >= targetAmount;
-  const progressRatio =
-    targetAmount > 0 ? Math.min(totalReduction / targetAmount, 1) : 0;
+  const totalReduction = useMemo(
+    () => checkedExpenses.reduce((sum, { monthly }) => sum + monthly, 0),
+    [checkedExpenses]
+  );
 
   const toggleCheck = (id: string) => {
     setCheckedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
-  const handleDelete = () => {
-    const count = checkedIds.size;
+  const toggleCancelDone = (id: string) => {
+    setCancelDoneIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const openCancelFlow = () => {
+    setCancelMode(true);
+    setCancelDoneIds(new Set());
+    Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+  };
+
+  const closeCancelFlow = () => {
+    Animated.timing(slideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
+      .start(() => setCancelMode(false));
+  };
+
+  const handleBulkDelete = () => {
+    const count = cancelDoneIds.size;
+    if (count === 0) {
+      Alert.alert('退会済みなし', '退会したサービスにチェックを入れてください');
+      return;
+    }
+    Alert.alert(
+      '一括削除の確認',
+      `退会済みの${count}件を一覧から削除しますか？`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '削除する',
+          style: 'destructive',
+          onPress: () => {
+            setExpenses(prev => prev.filter(e => !cancelDoneIds.has(e.id)));
+            setCheckedIds(prev => { const n = new Set(prev); cancelDoneIds.forEach(id => n.delete(id)); return n; });
+            setCancelDoneIds(new Set());
+            closeCancelFlow();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleQuickDelete = () => {
     Alert.alert(
       '削除の確認',
-      `チェックした${count}件を削除しますか？`,
+      `チェックした${checkedIds.size}件を削除しますか？`,
       [
         { text: 'キャンセル', style: 'cancel' },
         {
           text: '削除',
           style: 'destructive',
-          onPress: () => {
-            setExpenses(prev => prev.filter(e => !checkedIds.has(e.id)));
-            setCheckedIds(new Set());
-          },
+          onPress: () => { setExpenses(prev => prev.filter(e => !checkedIds.has(e.id))); setCheckedIds(new Set()); },
         },
       ]
     );
@@ -91,74 +123,15 @@ export default function SimulatorScreen() {
 
   return (
     <View style={s.root}>
+      {/* ── メイン一覧 ── */}
       <ScrollView
         style={s.scrollView}
-        contentContainerStyle={[s.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + (checkedIds.size > 0 ? 100 : 24) }]}
+        contentContainerStyle={[s.scrollContent, {
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + (checkedIds.size > 0 ? 140 : 24),
+        }]}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
-        {/* 目標入力 */}
-        <View style={s.card}>
-          <Text style={s.sectionLabel}>削減したい月額（円）</Text>
-          <View style={s.inputRow}>
-            <Text style={s.yenSign}>¥</Text>
-            <TextInput
-              style={s.targetInput}
-              value={targetInput}
-              onChangeText={v => setTargetInput(v.replace(/[^0-9]/g, ''))}
-              placeholder="例：10000"
-              placeholderTextColor="#CBD5E0"
-              keyboardType="number-pad"
-              returnKeyType="done"
-            />
-          </View>
-        </View>
-
-        {/* 進捗バー + ステータス */}
-        <View style={s.card}>
-          <View style={s.progressHeader}>
-            <Text style={s.progressLabel}>削減合計</Text>
-            <Text style={[s.progressAmount, achieved && s.textGreen]}>
-              {yen(Math.round(totalReduction))}
-            </Text>
-          </View>
-
-          {/* バー背景 */}
-          <View style={s.progressTrack}>
-            <View
-              style={[
-                s.progressFill,
-                {
-                  width: `${progressRatio * 100}%`,
-                  backgroundColor: achieved ? '#48BB78' : '#F6AD55',
-                },
-              ]}
-            />
-          </View>
-
-          {/* ステータス行 */}
-          {targetAmount > 0 ? (
-            achieved ? (
-              <View style={s.statusRow}>
-                <Ionicons name="checkmark-circle" size={18} color="#48BB78" />
-                <Text style={[s.statusText, s.textGreen]}>
-                  目標達成！（余剰 {yen(Math.round(totalReduction - targetAmount))}）
-                </Text>
-              </View>
-            ) : (
-              <View style={s.statusRow}>
-                <Ionicons name="arrow-up-circle-outline" size={18} color="#F6AD55" />
-                <Text style={[s.statusText, s.textOrange]}>
-                  あと {yen(Math.round(remaining))}
-                </Text>
-              </View>
-            )
-          ) : (
-            <Text style={s.statusHint}>上の入力欄に目標金額を入力してください</Text>
-          )}
-        </View>
-
-        {/* 固定費一覧 */}
         <View style={s.listSection}>
           <View style={s.listHeader}>
             <Text style={s.listTitle}>固定費一覧</Text>
@@ -174,7 +147,7 @@ export default function SimulatorScreen() {
           ) : (
             sortedExpenses.map(({ expense, monthly }) => {
               const checked = checkedIds.has(expense.id);
-              const { label, color, icon } = CAT[expense.category];
+              const { color, icon } = CAT[expense.category];
               return (
                 <TouchableOpacity
                   key={expense.id}
@@ -182,14 +155,9 @@ export default function SimulatorScreen() {
                   onPress={() => toggleCheck(expense.id)}
                   activeOpacity={0.75}
                 >
-                  {/* チェックボックス */}
                   <View style={[s.checkbox, checked && s.checkboxChecked]}>
-                    {checked && (
-                      <Ionicons name="checkmark" size={13} color="#fff" />
-                    )}
+                    {checked && <Ionicons name="checkmark" size={13} color="#fff" />}
                   </View>
-
-                  {/* アイコン */}
                   {hasServiceIcon(expense.name) ? (
                     <ServiceIcon name={expense.name} size={40} />
                   ) : (
@@ -197,28 +165,14 @@ export default function SimulatorScreen() {
                       <Ionicons name={icon as never} size={20} color={color} />
                     </View>
                   )}
-
-                  {/* 本文 */}
                   <View style={s.rowBody}>
                     <Text style={s.rowName} numberOfLines={1}>{expense.name}</Text>
-                    <View style={s.rowMeta}>
-                      <View style={[s.catBadge, { backgroundColor: color + '18' }]}>
-                        <Text style={[s.catBadgeText, { color }]}>{label}</Text>
-                      </View>
-                      <Text style={s.cycleText}>
-                        {cycleDisplay(expense.cycle, expense.customCycleDays)}
-                      </Text>
-                    </View>
                   </View>
-
-                  {/* 月額 */}
                   <View style={s.rowRight}>
                     <Text style={[s.rowAmount, checked && s.textRed]}>
                       {monthly === 0 ? '不定期' : yen(Math.round(monthly))}
                     </Text>
-                    {monthly !== 0 && (
-                      <Text style={s.rowAmountSub}>/月</Text>
-                    )}
+                    {monthly !== 0 && <Text style={s.rowAmountSub}>/月</Text>}
                   </View>
                 </TouchableOpacity>
               );
@@ -227,13 +181,110 @@ export default function SimulatorScreen() {
         </View>
       </ScrollView>
 
+      {/* ── ボトムバー ── */}
       {checkedIds.size > 0 && (
-        <View style={[s.deleteBar, { paddingBottom: insets.bottom + 12 }]}>
-          <TouchableOpacity style={s.deleteBtn} onPress={handleDelete} activeOpacity={0.85}>
-            <Ionicons name="trash-outline" size={18} color="#fff" />
-            <Text style={s.deleteBtnText}>{checkedIds.size}件を削除する</Text>
-          </TouchableOpacity>
+        <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={s.bottomBarTop}>
+            <Text style={s.reductionLabel}>削減合計</Text>
+            <Text style={s.reductionAmount}>{yen(Math.round(totalReduction))}<Text style={s.reductionSub}>/月</Text></Text>
+          </View>
+          <View style={s.bottomBarBtns}>
+            <TouchableOpacity style={s.cancelFlowBtn} onPress={openCancelFlow} activeOpacity={0.85}>
+              <Ionicons name="log-out-outline" size={18} color="#fff" />
+              <Text style={s.cancelFlowBtnText}>{checkedIds.size}件を退会する</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.quickDeleteBtn} onPress={handleQuickDelete} activeOpacity={0.85}>
+              <Ionicons name="trash-outline" size={18} color="#FC5A5A" />
+            </TouchableOpacity>
+          </View>
         </View>
+      )}
+
+      {/* ── 退会フロー画面（スライドイン） ── */}
+      {cancelMode && (
+        <Animated.View style={[s.flowPanel, { transform: [{ translateX: slideAnim }] }]}>
+          {/* ヘッダー */}
+          <View style={[s.flowHeader, { paddingTop: insets.top + 12 }]}>
+            <TouchableOpacity style={s.flowBack} onPress={closeCancelFlow} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color="#1A202C" />
+            </TouchableOpacity>
+            <Text style={s.flowTitle}>退会手続き</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <Text style={s.flowHint}>退会ページを開いて手続き後、チェックを入れてください</Text>
+
+          <ScrollView
+            contentContainerStyle={[s.flowContent, { paddingBottom: insets.bottom + 100 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {checkedExpenses.map(({ expense, monthly }) => {
+              const done = cancelDoneIds.has(expense.id);
+              const { color, icon } = CAT[expense.category];
+              const cancelUrl = getCancelUrl(expense.name)
+                ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
+              return (
+                <View key={expense.id} style={[s.flowRow, done && s.flowRowDone]}>
+                  <View style={s.flowRowLeft}>
+                    {hasServiceIcon(expense.name) ? (
+                      <ServiceIcon name={expense.name} size={42} />
+                    ) : (
+                      <View style={[s.catIcon, { backgroundColor: color + '20' }]}>
+                        <Ionicons name={icon as never} size={20} color={color} />
+                      </View>
+                    )}
+                    <View style={s.flowRowBody}>
+                      <Text style={[s.flowRowName, done && s.textDone]} numberOfLines={1}>
+                        {expense.name}
+                      </Text>
+                      <Text style={s.flowRowAmount}>
+                        {monthly === 0 ? '不定期' : `${yen(Math.round(monthly))}/月`}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={s.flowRowRight}>
+                    <TouchableOpacity
+                      style={s.openUrlBtn}
+                      onPress={() => Linking.openURL(cancelUrl)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={s.openUrlText}>
+                        {getCancelUrl(expense.name) ? '公式退会ページ' : '退会方法を検索'}
+                      </Text>
+                      <Ionicons name="open-outline" size={12} color="#3182CE" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.doneCheck, done && s.doneCheckDone]}
+                      onPress={() => toggleCancelDone(expense.id)}
+                      activeOpacity={0.75}
+                    >
+                      {done
+                        ? <><Ionicons name="checkmark-circle" size={16} color="#48BB78" /><Text style={s.doneCheckTextDone}>退会した</Text></>
+                        : <Text style={s.doneCheckText}>退会した</Text>
+                      }
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          {/* 削除ボタン */}
+          <View style={[s.flowFooter, { paddingBottom: insets.bottom + 12 }]}>
+            {cancelDoneIds.size > 0 && (
+              <Text style={s.flowFooterHint}>{cancelDoneIds.size}件が退会済み</Text>
+            )}
+            <TouchableOpacity
+              style={[s.bulkDeleteBtn, cancelDoneIds.size === 0 && s.bulkDeleteBtnDisabled]}
+              onPress={handleBulkDelete}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trash-outline" size={18} color={cancelDoneIds.size > 0 ? '#fff' : '#A0AEC0'} />
+              <Text style={[s.bulkDeleteBtnText, cancelDoneIds.size === 0 && s.bulkDeleteBtnTextDisabled]}>
+                退会済みを一括削除
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -243,65 +294,73 @@ export default function SimulatorScreen() {
 
 const s = StyleSheet.create({
   root:             { flex: 1, backgroundColor: '#F5F6FA' },
-
-  // スクロール
   scrollView:       { flex: 1 },
   scrollContent:    { padding: 16, gap: 12 },
 
-  // カード共通
-  card:             { backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-
-  // 目標入力
-  sectionLabel:     { fontSize: 12, fontWeight: '700', color: '#718096', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
-  inputRow:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F8FC', borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingLeft: 14 },
-  yenSign:          { fontSize: 18, fontWeight: '700', color: '#718096' },
-  targetInput:      { flex: 1, fontSize: 22, fontWeight: '700', color: '#1A202C', paddingVertical: 12, paddingHorizontal: 8 },
-
-  // 進捗
-  progressHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  progressLabel:    { fontSize: 13, fontWeight: '600', color: '#718096' },
-  progressAmount:   { fontSize: 20, fontWeight: '800', color: '#1A202C' },
-  progressTrack:    { height: 10, backgroundColor: '#EDF2F7', borderRadius: 5, overflow: 'hidden', marginBottom: 10 },
-  progressFill:     { height: '100%', borderRadius: 5 },
-  statusRow:        { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusText:       { fontSize: 14, fontWeight: '700' },
-  statusHint:       { fontSize: 13, color: '#A0AEC0', textAlign: 'center', paddingVertical: 2 },
-
-  // 一覧セクション
+  // 一覧
   listSection:      { gap: 8 },
   listHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
   listTitle:        { fontSize: 15, fontWeight: '700', color: '#1A202C' },
   listCount:        { fontSize: 13, color: '#A0AEC0' },
 
-  // 行
   row:              { backgroundColor: '#fff', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1, borderLeftWidth: 3, borderLeftColor: 'transparent' },
   rowChecked:       { backgroundColor: '#FFF5F5', borderLeftColor: '#FC5A5A' },
-  rowBody:          { flex: 1, gap: 4 },
+  rowBody:          { flex: 1 },
   rowName:          { fontSize: 15, fontWeight: '700', color: '#1A202C' },
-  rowMeta:          { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rowRight:         { alignItems: 'flex-end' },
   rowAmount:        { fontSize: 15, fontWeight: '800', color: '#1A202C' },
   rowAmountSub:     { fontSize: 11, color: '#A0AEC0', marginTop: 1 },
 
-  // チェックボックス
   checkbox:         { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#CBD5E0', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   checkboxChecked:  { backgroundColor: '#FC5A5A', borderColor: '#FC5A5A' },
-
-  // カテゴリアイコン
   catIcon:          { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  catBadge:         { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20 },
-  catBadgeText:     { fontSize: 11, fontWeight: '700' },
-  cycleText:        { fontSize: 11, color: '#A0AEC0', fontWeight: '500' },
+
+  // ボトムバー
+  bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 10, gap: 8 },
+  bottomBarTop:     { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  bottomBarBtns:    { flexDirection: 'row', gap: 10 },
+  reductionLabel:   { fontSize: 13, color: '#718096', fontWeight: '600' },
+  reductionAmount:  { fontSize: 20, fontWeight: '800', color: '#FC5A5A' },
+  reductionSub:     { fontSize: 12, fontWeight: '400', color: '#A0AEC0' },
+  cancelFlowBtn:    { flex: 1, backgroundColor: '#374151', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  cancelFlowBtnText:{ fontSize: 16, fontWeight: '700', color: '#fff' },
+  quickDeleteBtn:   { width: 52, height: 52, borderRadius: 14, borderWidth: 1.5, borderColor: '#FC5A5A', justifyContent: 'center', alignItems: 'center' },
+
+  // 退会フロー
+  flowPanel:        { ...StyleSheet.absoluteFillObject, backgroundColor: '#F5F6FA' },
+  flowHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 8, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
+  flowBack:         { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  flowTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
+  flowHint:         { fontSize: 12, color: '#A0AEC0', textAlign: 'center', paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
+  flowContent:      { padding: 16, gap: 10 },
+
+  flowRow:          { backgroundColor: '#fff', borderRadius: 14, padding: 14, gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
+  flowRowDone:      { backgroundColor: '#F0FFF4', opacity: 0.8 },
+  flowRowLeft:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  flowRowBody:      { flex: 1 },
+  flowRowName:      { fontSize: 15, fontWeight: '700', color: '#1A202C' },
+  flowRowAmount:    { fontSize: 12, color: '#A0AEC0', marginTop: 2 },
+  flowRowRight:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+
+  openUrlBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EBF8FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  openUrlText:      { fontSize: 12, fontWeight: '600', color: '#3182CE' },
+
+  doneCheck:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: '#CBD5E0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  doneCheckDone:    { borderColor: '#48BB78', backgroundColor: '#F0FFF4' },
+  doneCheckText:    { fontSize: 12, fontWeight: '600', color: '#A0AEC0' },
+  doneCheckTextDone:{ fontSize: 12, fontWeight: '700', color: '#48BB78' },
+
+  // フッター
+  flowFooter:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 20, paddingTop: 12 },
+  flowFooterHint:   { fontSize: 13, color: '#48BB78', fontWeight: '600', textAlign: 'center', marginBottom: 8 },
+  bulkDeleteBtn:    { backgroundColor: '#FC5A5A', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  bulkDeleteBtnDisabled: { backgroundColor: '#F7FAFC' },
+  bulkDeleteBtnText:{ fontSize: 16, fontWeight: '700', color: '#fff' },
+  bulkDeleteBtnTextDisabled: { color: '#A0AEC0' },
 
   // カラー
-  textGreen:        { color: '#48BB78' },
-  textOrange:       { color: '#F6AD55' },
   textRed:          { color: '#FC5A5A' },
-
-  // 削除バー
-  deleteBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 20, paddingTop: 12 },
-  deleteBtn:        { backgroundColor: '#FC5A5A', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  deleteBtnText:    { fontSize: 16, fontWeight: '700', color: '#fff' },
+  textDone:         { color: '#A0AEC0', textDecorationLine: 'line-through' },
 
   // 空状態
   empty:            { alignItems: 'center', paddingVertical: 60, gap: 10, backgroundColor: '#fff', borderRadius: 16 },
