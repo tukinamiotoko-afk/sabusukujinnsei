@@ -157,11 +157,15 @@ export default function SimulatorScreen() {
 
   return (
     <View style={s.root}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={s.headerTitle}>一括削除</Text>
+      </View>
+
       {/* ── メイン一覧 ── */}
       <ScrollView
         style={s.scrollView}
         contentContainerStyle={[s.scrollContent, {
-          paddingTop: insets.top + 16,
+          paddingTop: 16,
           paddingBottom: insets.bottom + (checkedIds.size > 0 ? 110 : 24),
         }]}
         showsVerticalScrollIndicator={false}
@@ -347,6 +351,8 @@ export default function SimulatorScreen() {
 
 const s = StyleSheet.create({
   root:             { flex: 1, backgroundColor: '#F5F6FA' },
+  header:           { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
+  headerTitle:      { fontSize: 22, fontWeight: '800', color: '#1A202C' },
   scrollView:       { flex: 1 },
   scrollContent:    { padding: 16, gap: 12 },
 
