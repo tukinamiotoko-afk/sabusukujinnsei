@@ -335,7 +335,7 @@ function TemplateBrowser({ onDirectAdd }: {
                       {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
                     </Text>
                   )}
-                  <Ionicons name="add-circle-outline" size={22} color="#374151" />
+                  <Ionicons name="add-circle-outline" size={22} color="#475569" />
                 </TouchableOpacity>
               );
             })
@@ -353,7 +353,7 @@ function TemplateBrowser({ onDirectAdd }: {
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
         <TouchableOpacity style={s.tmplBack} onPress={() => setActiveGroup(null)}>
-          <Ionicons name="chevron-back" size={18} color="#374151" />
+          <Ionicons name="chevron-back" size={18} color="#475569" />
           <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
             <Ionicons name={icon as never} size={14} color={color} />
           </View>
@@ -382,7 +382,7 @@ function TemplateBrowser({ onDirectAdd }: {
                     <Text style={s.tmplItemMeta}>{yen(item.amount)}/月</Text>
                   )}
                 </View>
-                <Ionicons name="add-circle-outline" size={22} color="#374151" />
+                <Ionicons name="add-circle-outline" size={22} color="#475569" />
               </TouchableOpacity>
             );
           })}
@@ -421,7 +421,7 @@ function TemplateBrowser({ onDirectAdd }: {
             }
           }}
         >
-          <Ionicons name="chevron-back" size={18} color="#374151" />
+          <Ionicons name="chevron-back" size={18} color="#475569" />
           <View style={[s.tmplBackIcon, { backgroundColor: backColor + '20' }]}>
             <Ionicons name={backIcon as never} size={14} color={backColor} />
           </View>
@@ -465,7 +465,7 @@ function TemplateBrowser({ onDirectAdd }: {
                     {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
                   </Text>
                 )}
-                <Ionicons name="add-circle-outline" size={22} color="#374151" />
+                <Ionicons name="add-circle-outline" size={22} color="#475569" />
               </TouchableOpacity>
             );
           })}
@@ -481,7 +481,7 @@ function TemplateBrowser({ onDirectAdd }: {
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
         <TouchableOpacity style={s.tmplBack} onPress={() => { setActiveCategory(null); setActiveGroup(null); }}>
-          <Ionicons name="chevron-back" size={18} color="#374151" />
+          <Ionicons name="chevron-back" size={18} color="#475569" />
           <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
             <Ionicons name={icon as never} size={14} color={color} />
           </View>
@@ -614,7 +614,7 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
             onPress={onOpenPayPanel}
             activeOpacity={0.75}
           >
-            <Ionicons name="calendar-outline" size={15} color="#374151" />
+            <Ionicons name="calendar-outline" size={15} color="#475569" />
             <Text style={s.dropdownTriggerText}>{payDisplay}</Text>
             <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
           </TouchableOpacity>
@@ -627,7 +627,7 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
             style={[s.textInput, s.dateSelector]}
             onPress={() => setShowDate(true)}
           >
-            <Ionicons name="calendar-outline" size={18} color="#374151" />
+            <Ionicons name="calendar-outline" size={18} color="#475569" />
             <Text style={s.dateSelectorText}>
               {format(form.nextDate, 'yyyy年M月d日(E)', { locale: ja })}
             </Text>
@@ -888,12 +888,12 @@ function ExpenseModal({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: '#F5F6FA', transform: [{ translateX: slideAnim }] },
+              { backgroundColor: '#F8FAFC', transform: [{ translateX: slideAnim }] },
             ]}
           >
             <View style={s.catPanelHeader}>
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closeCatPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#374151" />
+                <Ionicons name="chevron-back" size={22} color="#475569" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>カテゴリを選択</Text>
               <View style={{ width: 44 }} />
@@ -916,7 +916,7 @@ function ExpenseModal({
                       <Ionicons name={icon as never} size={18} color={color} />
                     </View>
                     <Text style={[s.catPanelRowText, sel && s.catPanelRowTextSel]}>{label}</Text>
-                    {sel && <Ionicons name="checkmark" size={18} color="#374151" />}
+                    {sel && <Ionicons name="checkmark" size={18} color="#475569" />}
                   </TouchableOpacity>
                 );
               })}
@@ -929,12 +929,12 @@ function ExpenseModal({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: '#F5F6FA', transform: [{ translateX: quickSlideAnim }] },
+              { backgroundColor: '#F8FAFC', transform: [{ translateX: quickSlideAnim }] },
             ]}
           >
             <View style={s.catPanelHeader}>
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closeQuickPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#374151" />
+                <Ionicons name="chevron-back" size={22} color="#475569" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>
                 {quickItem.step === 'amount' ? '金額を入力' : quickItem.step === 'payment' ? '支払い周期' : '支払日を確認'}
@@ -1054,12 +1054,12 @@ function ExpenseModal({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: '#F5F6FA', transform: [{ translateX: paySlideAnim }] },
+              { backgroundColor: '#F8FAFC', transform: [{ translateX: paySlideAnim }] },
             ]}
           >
             <View style={s.catPanelHeader}>
               <TouchableOpacity style={s.catPanelBackBtn} onPress={closePayPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#374151" />
+                <Ionicons name="chevron-back" size={22} color="#475569" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>支払周期と支払日</Text>
               <View style={{ width: 44 }} />
@@ -1250,7 +1250,7 @@ export default function HomeScreen() {
   return (
     <View style={s.root}>
       <LinearGradient
-        colors={['#4B5563', '#374151', '#1F2937']}
+        colors={['#64748B', '#475569', '#334155']}
         style={[s.header, { paddingTop: insets.top + 12 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -1299,7 +1299,7 @@ export default function HomeScreen() {
         activeOpacity={0.85}
       >
         <LinearGradient
-          colors={['#4B5563', '#374151']}
+          colors={['#64748B', '#475569']}
           style={s.fabInner}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -1324,7 +1324,7 @@ export default function HomeScreen() {
 // ─── スタイル ─────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:              { flex: 1, backgroundColor: '#F5F6FA' },
+  root:              { flex: 1, backgroundColor: '#F8FAFC' },
   header:            { paddingHorizontal: 20, paddingBottom: 24 },
   appTitle:          { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
   appSub:            { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2, marginBottom: 16 },
@@ -1340,7 +1340,7 @@ const s = StyleSheet.create({
   nextDot:           { width: 8, height: 8, borderRadius: 4 },
   nextName:          { flex: 1, fontSize: 15, fontWeight: '700', color: '#1A202C' },
   nextDate:          { fontSize: 13, color: '#718096' },
-  nextAmount:        { fontSize: 15, fontWeight: '800', color: '#374151', marginLeft: 8 },
+  nextAmount:        { fontSize: 15, fontWeight: '800', color: '#475569', marginLeft: 8 },
   listHeader:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   listTitle:         { fontSize: 16, fontWeight: '700', color: '#1A202C' },
   listCount:         { fontSize: 13, color: '#A0AEC0' },
@@ -1374,24 +1374,24 @@ const s = StyleSheet.create({
   empty:             { alignItems: 'center', paddingVertical: 60, gap: 10 },
   emptyTitle:        { fontSize: 16, fontWeight: '600', color: '#CBD5E0' },
   emptySub:          { fontSize: 13, color: '#CBD5E0' },
-  fab:               { position: 'absolute', right: 22, borderRadius: 30, shadowColor: '#374151', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+  fab:               { position: 'absolute', right: 22, borderRadius: 30, shadowColor: '#475569', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   fabInner:          { width: 58, height: 58, borderRadius: 29, justifyContent: 'center', alignItems: 'center' },
   fabText:           { fontSize: 28, color: '#fff', lineHeight: 32, fontWeight: '400' },
 
   // モーダル共通
-  modalRoot:         { flex: 1, backgroundColor: '#F5F6FA' },
+  modalRoot:         { flex: 1, backgroundColor: '#F8FAFC' },
   modalHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   modalBtn:          { minWidth: 64 },
   modalBtnCancel:    { fontSize: 16, color: '#718096' },
   modalTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
-  modalBtnSave:      { fontSize: 16, fontWeight: '700', color: '#374151', textAlign: 'right' },
+  modalBtnSave:      { fontSize: 16, fontWeight: '700', color: '#475569', textAlign: 'right' },
 
   // タブバー
   tabBar:            { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   tabBtn:            { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive:      { borderBottomColor: '#374151' },
+  tabBtnActive:      { borderBottomColor: '#475569' },
   tabBtnText:        { fontSize: 14, fontWeight: '600', color: '#A0AEC0' },
-  tabBtnTextActive:  { color: '#374151' },
+  tabBtnTextActive:  { color: '#475569' },
 
   // テンプレートブラウザ
   searchWrap:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
@@ -1409,23 +1409,23 @@ const s = StyleSheet.create({
   tmplItemIcon:      { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   tmplItemName:      { fontSize: 15, fontWeight: '600', color: '#1A202C' },
   tmplItemMeta:      { fontSize: 12, color: '#A0AEC0', marginTop: 2 },
-  tmplItemAmount:    { fontSize: 14, fontWeight: '700', color: '#374151', marginRight: 4 },
+  tmplItemAmount:    { fontSize: 14, fontWeight: '700', color: '#475569', marginRight: 4 },
   tmplEmpty:         { alignItems: 'center', paddingVertical: 48, gap: 8 },
   tmplEmptyText:     { fontSize: 15, color: '#718096', fontWeight: '600' },
   tmplEmptySubText:  { fontSize: 13, color: '#A0AEC0' },
 
   // プランバッジ
   planBadge:           { backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, marginRight: 4 },
-  planBadgeText:       { fontSize: 11, fontWeight: '700', color: '#374151' },
+  planBadgeText:       { fontSize: 11, fontWeight: '700', color: '#475569' },
 
   // 月払い / 年払いボタン
   billingBtns:         { flexDirection: 'row', gap: 5 },
   billingBtn:          { alignItems: 'center', backgroundColor: '#F7F8FC', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: '#E2E8F0', minWidth: 62 },
   billingBtnYearly:    { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' },
   billingBtnLabel:     { fontSize: 10, fontWeight: '600', color: '#718096', marginBottom: 1 },
-  billingBtnLabelYearly: { color: '#374151' },
+  billingBtnLabelYearly: { color: '#475569' },
   billingBtnAmount:    { fontSize: 12, fontWeight: '700', color: '#1A202C' },
-  billingBtnAmountYearly: { color: '#374151' },
+  billingBtnAmountYearly: { color: '#475569' },
 
   // フォーム
   modalBody:         { padding: 16, gap: 4 },
@@ -1449,22 +1449,22 @@ const s = StyleSheet.create({
   catPanelRowSelected:  { backgroundColor: '#F3F4F6' },
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
-  catPanelRowTextSel:   { color: '#374151', fontWeight: '700' },
+  catPanelRowTextSel:   { color: '#475569', fontWeight: '700' },
 
   // クイック追加パネル
   qaServiceRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   qaServiceName:    { fontSize: 17, fontWeight: '800', color: '#1A202C' },
-  qaServiceAmt:     { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 2 },
+  qaServiceAmt:     { fontSize: 14, fontWeight: '600', color: '#475569', marginTop: 2 },
   qaPanelBody:      { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32, gap: 16 },
   qaPanelIcon:      { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   qaDayPrompt:      { fontSize: 12, fontWeight: '700', color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: 0.5, alignSelf: 'flex-start' },
   qaDayRow:         { flexDirection: 'row', alignItems: 'center', gap: 12 },
   qaDayLabel:       { fontSize: 18, fontWeight: '600', color: '#4A5568' },
-  qaDayInput:       { fontSize: 38, fontWeight: '800', color: '#374151', textAlign: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 10, width: 110, borderWidth: 2, borderColor: '#D1D5DB' },
+  qaDayInput:       { fontSize: 38, fontWeight: '800', color: '#475569', textAlign: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 10, width: 110, borderWidth: 2, borderColor: '#D1D5DB' },
   qaAmountRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 14, borderWidth: 2, borderColor: '#D1D5DB', paddingLeft: 16, overflow: 'hidden', width: '100%' },
   qaAmountSign:     { fontSize: 28, fontWeight: '700', color: '#4A5568' },
-  qaAmountInput:    { flex: 1, fontSize: 36, fontWeight: '800', color: '#374151', paddingVertical: 12, paddingLeft: 6 },
-  qaBtn:            { backgroundColor: '#374151', borderRadius: 14, paddingVertical: 16, marginTop: 4, alignItems: 'center', width: '100%' },
+  qaAmountInput:    { flex: 1, fontSize: 36, fontWeight: '800', color: '#475569', paddingVertical: 12, paddingLeft: 6 },
+  qaBtn:            { backgroundColor: '#475569', borderRadius: 14, paddingVertical: 16, marginTop: 4, alignItems: 'center', width: '100%' },
   qaBtnText:        { fontSize: 17, fontWeight: '700', color: '#fff' },
 
   // 支払スライドパネル
@@ -1479,14 +1479,14 @@ const s = StyleSheet.create({
   dayPanelDivider:    { height: 1, backgroundColor: '#D1D5DB', marginVertical: 12 },
   dayRow:             { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dayRowLabel:        { fontSize: 16, fontWeight: '600', color: '#4A5568' },
-  dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#374151', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
+  dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#475569', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
   cycleRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderRadius: 8, gap: 8 },
   cycleRowSelected:   { backgroundColor: 'rgba(55,65,81,0.08)' },
   cycleRowText:       { flex: 1, fontSize: 15, color: '#CBD5E0', fontWeight: '400' },
-  cycleRowTextSel:    { color: '#374151', fontWeight: '700' },
+  cycleRowTextSel:    { color: '#475569', fontWeight: '700' },
 
   dateSelector:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dateSelectorText:  { fontSize: 16, color: '#1A202C' },
   dateConfirm:       { alignItems: 'flex-end', paddingRight: 4, paddingVertical: 8, marginTop: -8, marginBottom: 8 },
-  dateConfirmText:   { fontSize: 16, color: '#374151', fontWeight: '700' },
+  dateConfirmText:   { fontSize: 16, color: '#475569', fontWeight: '700' },
 });

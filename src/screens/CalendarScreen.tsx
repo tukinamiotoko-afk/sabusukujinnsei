@@ -180,13 +180,13 @@ export default function CalendarScreen() {
         {/* 月ナビゲーション */}
         <View style={c.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={c.navBtn} hitSlop={8}>
-            <Ionicons name="chevron-back" size={22} color="#374151" />
+            <Ionicons name="chevron-back" size={22} color="#475569" />
           </TouchableOpacity>
           <Text style={c.monthLabel}>
             {format(new Date(viewYear, viewMonth, 1), 'yyyy年M月', { locale: ja })}
           </Text>
           <TouchableOpacity onPress={nextMonth} style={c.navBtn} hitSlop={8}>
-            <Ionicons name="chevron-forward" size={22} color="#374151" />
+            <Ionicons name="chevron-forward" size={22} color="#475569" />
           </TouchableOpacity>
         </View>
 
@@ -308,7 +308,7 @@ export default function CalendarScreen() {
 // ─── スタイル ─────────────────────────────────────────────────────────────────
 
 const c = StyleSheet.create({
-  root:              { flex: 1, backgroundColor: '#F5F6FA' },
+  root:              { flex: 1, backgroundColor: '#F8FAFC' },
   header:            { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   screenTitle:       { fontSize: 22, fontWeight: '800', color: '#1A202C', marginBottom: 12 },
   monthNav:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
@@ -323,9 +323,9 @@ const c = StyleSheet.create({
   grid:              { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4, paddingVertical: 4, backgroundColor: '#fff' },
   dayCell:           { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 4, gap: 3 },
   dayCellToday:      { backgroundColor: '#F3F4F6', borderRadius: 10 },
-  dayCellSelected:   { backgroundColor: '#374151', borderRadius: 10 },
+  dayCellSelected:   { backgroundColor: '#475569', borderRadius: 10 },
   dayNum:            { fontSize: 22, fontWeight: '700', color: '#1A202C' },
-  dayNumToday:       { color: '#374151', fontWeight: '800' },
+  dayNumToday:       { color: '#475569', fontWeight: '800' },
   dayNumSelected:    { color: '#fff', fontWeight: '800' },
   dotsRow:           { flexDirection: 'row', gap: 2 },
   dot:               { width: 5, height: 5, borderRadius: 3 },
@@ -347,5 +347,5 @@ const c = StyleSheet.create({
   actionBtn:         { width: 30, height: 30, borderRadius: 8, backgroundColor: '#F7FAFC', justifyContent: 'center', alignItems: 'center' },
   detailTotal:       { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 4 },
   detailTotalLabel:  { fontSize: 14, fontWeight: '700', color: '#718096' },
-  detailTotalValue:  { fontSize: 16, fontWeight: '800', color: '#374151' },
+  detailTotalValue:  { fontSize: 16, fontWeight: '800', color: '#475569' },
 });

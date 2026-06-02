@@ -350,7 +350,7 @@ export default function SimulatorScreen() {
 // ─── スタイル ─────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:             { flex: 1, backgroundColor: '#F5F6FA' },
+  root:             { flex: 1, backgroundColor: '#F8FAFC' },
   header:           { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   headerTitle:      { fontSize: 22, fontWeight: '800', color: '#1A202C' },
   scrollView:       { flex: 1 },
@@ -389,12 +389,12 @@ const s = StyleSheet.create({
 
   // ボトムバー
   bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 12, flexDirection: 'row', gap: 10 },
-  cancelFlowBtn:    { flex: 1, backgroundColor: '#374151', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  cancelFlowBtn:    { flex: 1, backgroundColor: '#475569', borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   cancelFlowBtnText:{ fontSize: 16, fontWeight: '700', color: '#fff' },
   quickDeleteBtn:   { width: 52, height: 52, borderRadius: 14, borderWidth: 1.5, borderColor: '#FC5A5A', justifyContent: 'center', alignItems: 'center' },
 
   // 退会フロー
-  flowPanel:        { ...StyleSheet.absoluteFillObject, backgroundColor: '#F5F6FA' },
+  flowPanel:        { ...StyleSheet.absoluteFillObject, backgroundColor: '#F8FAFC' },
   flowHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 8, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   flowBack:         { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   flowTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
