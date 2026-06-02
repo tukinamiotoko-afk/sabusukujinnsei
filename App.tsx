@@ -15,6 +15,7 @@ function TabNavigator() {
   const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
+      backBehavior="none"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#374151',

@@ -15,6 +15,7 @@ import {
   Dimensions,
   Linking,
   PanResponder,
+  BackHandler,
 } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -24,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -175,7 +177,7 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
           <View style={s.cardRight}>
             <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
             <TouchableOpacity onPress={onEdit} hitSlop={8} style={s.editIconBtn}>
-              <Ionicons name="create-outline" size={20} color="#718096" />
+              <Feather name="edit-2" size={17} color="#718096" />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -750,6 +752,19 @@ function ExpenseModal({
     onQuickAdd(exp);
     closeQuickPanel();
   };
+
+  // Android 戻るボタン: パネルを順に閉じる
+  useEffect(() => {
+    if (!visible) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (quickItem) { closeQuickPanel(); return true; }
+      if (catPanel)  { closeCatPanel();   return true; }
+      if (payPanel)  { closePayPanel();   return true; }
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible, quickItem, catPanel, payPanel]);
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;

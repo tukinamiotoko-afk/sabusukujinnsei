@@ -10,6 +10,7 @@ import {
   Easing,
   Dimensions,
   Linking,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,6 +94,15 @@ export default function SimulatorScreen() {
       return next;
     });
   };
+
+  // Android 戻るボタン: 退会フローを閉じる
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (cancelMode) { closeCancelFlow(); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  }, [cancelMode]);
 
   const openCancelFlow = () => {
     setCancelMode(true);
