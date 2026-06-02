@@ -4,7 +4,7 @@ export type Category =
   | 'subscription' | 'housing' | 'insurance' | 'telecom'
   | 'loan' | 'transport' | 'lesson' | 'delivery'
   | 'membership' | 'social'
-  | 'hospital' | 'medicine' | 'haircut' | 'protein' | 'other';
+  | 'hospital' | 'haircut' | 'healthfood' | 'other';
 
 export type Cycle =
   | 'weekly' | 'monthly' | 'yearly'
@@ -58,10 +58,9 @@ export const CAT: Record<Category, { label: string; color: string; icon: string 
   delivery:     { label: '定期購入・便',   color: '#805AD5', icon: 'cube-outline' },
   membership:   { label: '年会費・会費',   color: '#B7791F', icon: 'card-outline' },
   social:       { label: '社会保険・公共', color: '#4A5568', icon: 'document-text-outline' },
-  hospital:     { label: '病院',           color: '#F56565', icon: 'medical-outline' },
-  medicine:     { label: '薬',             color: '#4299E1', icon: 'flask-outline' },
+  hospital:     { label: '病院・薬',       color: '#F56565', icon: 'medical-outline' },
   haircut:      { label: '散髪',           color: '#ED64A6', icon: 'cut-outline' },
-  protein:      { label: 'プロテイン',     color: '#F6AD55', icon: 'fitness-outline' },
+  healthfood:   { label: '健康食品',       color: '#48BB78', icon: 'nutrition-outline' },
   other:        { label: 'その他',         color: '#A0AEC0', icon: 'apps-outline' },
 };
 
