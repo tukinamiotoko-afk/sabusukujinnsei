@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import {
   type Expense,
 } from '../context/ExpensesContext';
 import ServiceIcon, { ServiceIconMini, hasServiceIcon } from '../components/ServiceIcon';
+import { getCancelUrl } from '../data/templates';
 
 const yen = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
 
@@ -89,7 +92,20 @@ function DayCell({
 
 export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
-  const { expenses } = useExpenses();
+  const { expenses, setExpenses } = useExpenses();
+
+  const deleteExpense = (id: string, name: string) => {
+    Alert.alert('削除の確認', `「${name}」を削除しますか？`, [
+      { text: 'キャンセル', style: 'cancel' },
+      { text: '削除', style: 'destructive', onPress: () => setExpenses(prev => prev.filter(e => e.id !== id)) },
+    ]);
+  };
+
+  const openCancelPage = (name: string) => {
+    const url = getCancelUrl(name)
+      ?? `https://www.google.com/search?q=${encodeURIComponent(name + ' 退会方法')}`;
+    Linking.openURL(url);
+  };
 
   const today = new Date();
   const [viewYear, setViewYear]   = useState(today.getFullYear());
@@ -219,7 +235,25 @@ export default function CalendarScreen() {
                         <Text style={c.detailCycle}>{cycleDisplay(exp.cycle, exp.customCycleDays)}</Text>
                       </View>
                     </View>
-                    <Text style={c.detailAmount}>{yen(exp.amount)}</Text>
+                    <View style={c.detailRight}>
+                      <Text style={c.detailAmount}>{yen(exp.amount)}</Text>
+                      <View style={c.cardActions}>
+                        <TouchableOpacity
+                          style={c.actionBtn}
+                          onPress={() => openCancelPage(exp.name)}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="log-out-outline" size={18} color="#718096" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={c.actionBtn}
+                          onPress={() => deleteExpense(exp.id, exp.name)}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#FC5A5A" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
                 );
               })
@@ -275,7 +309,10 @@ const c = StyleSheet.create({
   catChip:           { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 20 },
   catChipText:       { fontSize: 11, fontWeight: '700' },
   detailCycle:       { fontSize: 11, color: '#A0AEC0' },
+  detailRight:       { alignItems: 'flex-end', gap: 6 },
   detailAmount:      { fontSize: 16, fontWeight: '800', color: '#1A202C' },
+  cardActions:       { flexDirection: 'row', gap: 4 },
+  actionBtn:         { width: 30, height: 30, borderRadius: 8, backgroundColor: '#F7FAFC', justifyContent: 'center', alignItems: 'center' },
   detailTotal:       { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 4 },
   detailTotalLabel:  { fontSize: 14, fontWeight: '700', color: '#718096' },
   detailTotalValue:  { fontSize: 16, fontWeight: '800', color: '#374151' },
