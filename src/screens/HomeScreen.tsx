@@ -934,7 +934,7 @@ function ExpenseModal({
               <Text style={s.catPanelTitle}>支払周期と支払日</Text>
               <View style={{ width: 44 }} />
             </View>
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.payPanelContent}>
+            <View style={s.payPanelContent}>
 
               {/* 毎月の支払日 */}
               <Text style={s.dayPanelSection}>毎月の支払日</Text>
@@ -956,31 +956,30 @@ function ExpenseModal({
 
               <View style={s.dayPanelDivider} />
 
-              {/* 支払周期 */}
+              {/* 支払周期（日数入力） */}
               <Text style={s.dayPanelSection}>支払周期</Text>
-              <View style={s.payPanelCycleList}>
-                {CYCLES.map(cycle => {
-                  const sel = form.cycle === cycle;
-                  return (
-                    <TouchableOpacity
-                      key={cycle}
-                      style={[s.cycleRow, sel && s.cycleRowSelected]}
-                      onPress={() => setForm(f => ({ ...f, cycle }))}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[s.cycleRowText, sel && s.cycleRowTextSel]}>
-                        {CYCLE_LABEL[cycle]}
-                      </Text>
-                      {sel && <Ionicons name="checkmark" size={16} color="#374151" />}
-                    </TouchableOpacity>
-                  );
-                })}
+              <View style={s.dayPanel}>
+                <View style={s.dayRow}>
+                  <TextInput
+                    style={[s.dayNumInput, { width: 110 }]}
+                    value={form.customCycleDays}
+                    onChangeText={v => setForm(f => ({
+                      ...f,
+                      customCycleDays: v.replace(/[^0-9]/g, ''),
+                      cycle: 'custom',
+                    }))}
+                    placeholder="30"
+                    placeholderTextColor="#CBD5E0"
+                    keyboardType="number-pad"
+                  />
+                  <Text style={s.dayRowLabel}>日ごと</Text>
+                </View>
               </View>
 
               <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={closePayPanel} activeOpacity={0.85}>
                 <Text style={s.qaBtnText}>完了</Text>
               </TouchableOpacity>
-            </ScrollView>
+            </View>
           </Animated.View>
         )}
       </KeyboardAvoidingView>
