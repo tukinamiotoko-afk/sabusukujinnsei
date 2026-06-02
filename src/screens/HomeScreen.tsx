@@ -148,14 +148,19 @@ function TmplIcon({ name, color, icon }: { name: string; color: string; icon: st
       </View>;
 }
 
-function BillingButtons({ item, cat, onSelect }: {
+function BillingButtons({ item, cat, onSelect, onDirectAdd }: {
   item: TemplateItem; cat: Category;
   onSelect: (cat: Category, item: TemplateItem) => void;
+  onDirectAdd: (cat: Category, item: TemplateItem) => void;
 }) {
+  const isYen = item.currency !== 'USD';
   return (
     <View style={s.billingBtns}>
       {item.amount !== undefined && (
-        <TouchableOpacity style={s.billingBtn} onPress={() => onSelect(cat, item)}>
+        <TouchableOpacity
+          style={s.billingBtn}
+          onPress={() => isYen ? onDirectAdd(cat, item) : onSelect(cat, item)}
+        >
           <Text style={s.billingBtnLabel}>月払い</Text>
           <Text style={s.billingBtnAmount}>{yen(item.amount)}</Text>
         </TouchableOpacity>
@@ -163,7 +168,9 @@ function BillingButtons({ item, cat, onSelect }: {
       {item.yearlyAmount !== undefined && (
         <TouchableOpacity
           style={[s.billingBtn, s.billingBtnYearly]}
-          onPress={() => onSelect(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}
+          onPress={() => isYen
+            ? onDirectAdd(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })
+            : onSelect(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}
         >
           <Text style={[s.billingBtnLabel, s.billingBtnLabelYearly]}>年払い</Text>
           <Text style={[s.billingBtnAmount, s.billingBtnAmountYearly]}>{yen(item.yearlyAmount!)}</Text>
@@ -173,8 +180,12 @@ function BillingButtons({ item, cat, onSelect }: {
   );
 }
 
-function TemplateBrowser({ onSelect }: {
+const canDirectAdd = (item: TemplateItem) =>
+  item.amount !== undefined && item.currency !== 'USD';
+
+function TemplateBrowser({ onSelect, onDirectAdd }: {
   onSelect: (cat: Category, item: TemplateItem) => void;
+  onDirectAdd: (cat: Category, item: TemplateItem) => void;
 }) {
   const [search, setSearch]         = useState('');
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
@@ -232,12 +243,14 @@ function TemplateBrowser({ onSelect }: {
                   <View key={i} style={s.tmplItem}>
                     <TmplIcon name={item.name} color={color} icon={icon} />
                     <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{item.name}</Text>
-                    <BillingButtons item={item} cat={cat} onSelect={onSelect} />
+                    <BillingButtons item={item} cat={cat} onSelect={onSelect} onDirectAdd={onDirectAdd} />
                   </View>
                 );
               }
               return (
-                <TouchableOpacity key={i} style={s.tmplItem} onPress={() => onSelect(cat, item)} activeOpacity={0.7}>
+                <TouchableOpacity key={i} style={s.tmplItem}
+                  onPress={() => canDirectAdd(item) ? onDirectAdd(cat, item) : onSelect(cat, item)}
+                  activeOpacity={0.7}>
                   <TmplIcon name={item.name} color={color} icon={icon} />
                   <View style={{ flex: 1 }}>
                     <Text style={s.tmplItemName}>{item.name}</Text>
@@ -280,12 +293,14 @@ function TemplateBrowser({ onSelect }: {
                 <View key={i} style={s.tmplItem}>
                   <TmplIcon name={item.name} color={color} icon={icon} />
                   <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{planLabel}</Text>
-                  <BillingButtons item={item} cat={activeCategory} onSelect={onSelect} />
+                  <BillingButtons item={item} cat={activeCategory} onSelect={onSelect} onDirectAdd={onDirectAdd} />
                 </View>
               );
             }
             return (
-              <TouchableOpacity key={i} style={s.tmplItem} onPress={() => onSelect(activeCategory, item)} activeOpacity={0.7}>
+              <TouchableOpacity key={i} style={s.tmplItem}
+                onPress={() => canDirectAdd(item) ? onDirectAdd(activeCategory, item) : onSelect(activeCategory, item)}
+                activeOpacity={0.7}>
                 <TmplIcon name={item.name} color={color} icon={icon} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.tmplItemName}>{planLabel}</Text>
@@ -336,12 +351,14 @@ function TemplateBrowser({ onSelect }: {
                 <View key={i} style={s.tmplItem}>
                   <TmplIcon name={item.name} color={color} icon={icon} />
                   <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{item.name}</Text>
-                  <BillingButtons item={item} cat={activeCategory} onSelect={onSelect} />
+                  <BillingButtons item={item} cat={activeCategory} onSelect={onSelect} onDirectAdd={onDirectAdd} />
                 </View>
               );
             }
             return (
-              <TouchableOpacity key={i} style={s.tmplItem} onPress={() => onSelect(activeCategory, item)} activeOpacity={0.7}>
+              <TouchableOpacity key={i} style={s.tmplItem}
+                onPress={() => canDirectAdd(item) ? onDirectAdd(activeCategory, item) : onSelect(activeCategory, item)}
+                activeOpacity={0.7}>
                 <TmplIcon name={item.name} color={color} icon={icon} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.tmplItemName}>{item.name}</Text>
@@ -524,11 +541,12 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
 // ─── 追加・編集モーダル ───────────────────────────────────────────────────────
 
 function ExpenseModal({
-  visible, isEdit, form, setForm, onSave, onClose,
+  visible, isEdit, form, setForm, onSave, onClose, onDirectAdd,
 }: {
   visible: boolean; isEdit: boolean;
   form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>;
   onSave: () => void; onClose: () => void;
+  onDirectAdd: (cat: Category, item: TemplateItem) => void;
 }) {
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [showDate, setShowDate] = useState(false);
@@ -633,7 +651,7 @@ function ExpenseModal({
           {/* コンテンツ */}
           <View style={{ flex: 1 }}>
             {activeTab === 'template' ? (
-              <TemplateBrowser onSelect={handleTemplateSelect} />
+              <TemplateBrowser onSelect={handleTemplateSelect} onDirectAdd={onDirectAdd} />
             ) : (
               <CustomForm
                 form={form}
@@ -793,7 +811,6 @@ export default function HomeScreen() {
   const sorted = [...expenses].sort(
     (a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime()
   );
-  const next = sorted.find(e => e.cycle !== 'irregular');
 
   const openAdd = () => {
     setEditId(null);
@@ -848,6 +865,21 @@ export default function HomeScreen() {
     setModalVisible(false);
   };
 
+  const handleDirectAdd = (cat: Category, item: TemplateItem) => {
+    const exp: Expense = {
+      id:              genId(),
+      name:            item.name,
+      amount:          item.amount!,
+      category:        cat,
+      cycle:           item.cycle ?? 'monthly',
+      customCycleDays: undefined,
+      nextDate:        new Date().toISOString(),
+      memo:            '',
+    };
+    setExpenses(prev => [...prev, exp]);
+    setModalVisible(false);
+  };
+
   const handleDelete = (id: string) => {
     Alert.alert('削除の確認', 'この項目を削除しますか？', [
       { text: 'キャンセル', style: 'cancel' },
@@ -864,7 +896,6 @@ export default function HomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <Text style={s.appTitle}>サブスク人生</Text>
         <Text style={s.appSub}>{format(new Date(), 'yyyy年M月', { locale: ja })}</Text>
         <View style={s.summaryBox}>
           <View style={s.summaryItem}>
@@ -880,18 +911,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </LinearGradient>
-
-      {next && (
-        <View style={s.nextBox}>
-          <Text style={s.nextLabel}>次の支払い</Text>
-          <View style={s.nextRow}>
-            <View style={[s.nextDot, { backgroundColor: CAT[next.category].color }]} />
-            <Text style={s.nextName}>{next.name}</Text>
-            <Text style={s.nextDate}>{fmtDate(next.nextDate)}</Text>
-            <Text style={s.nextAmount}>{yen(next.amount)}</Text>
-          </View>
-        </View>
-      )}
 
       <View style={s.listHeader}>
         <Text style={s.listTitle}>登録一覧</Text>
@@ -943,6 +962,7 @@ export default function HomeScreen() {
         setForm={setForm}
         onSave={handleSave}
         onClose={() => setModalVisible(false)}
+        onDirectAdd={handleDirectAdd}
       />
     </View>
   );
@@ -1081,7 +1101,7 @@ const s = StyleSheet.create({
   dayNumInput:        { fontSize: 28, fontWeight: '800', color: '#6C63FF', textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 8, width: 80 },
   cycleRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderRadius: 8, gap: 8 },
   cycleRowSelected:   { backgroundColor: 'rgba(108,99,255,0.08)' },
-  cycleRowText:       { flex: 1, fontSize: 15, color: '#4A5568', fontWeight: '500' },
+  cycleRowText:       { flex: 1, fontSize: 15, color: '#CBD5E0', fontWeight: '400' },
   cycleRowTextSel:    { color: '#6C63FF', fontWeight: '700' },
 
   dateSelector:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
