@@ -44,6 +44,8 @@ import {
 } from '../context/ExpensesContext';
 import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, type TemplateItem } from '../data/templates';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
+import { usePro, FREE_LIMIT } from '../context/ProContext';
+import InterstitialAdModal from '../components/InterstitialAdModal';
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
 
@@ -634,6 +636,9 @@ function ExpenseModal({
   onSave: () => void; onClose: () => void;
   onQuickAdd: (exp: Expense) => void;
 }) {
+  const { isPro, openPaywall } = usePro();
+  const { expenses: allExpenses } = useExpenses();
+
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [tmplCat, setTmplCat]       = useState<Category | null>(null);
   const [tmplSubcat, setTmplSubcat] = useState<string | null>(null);
@@ -658,6 +663,7 @@ function ExpenseModal({
   const billingAnim = useRef(new Animated.Value(500)).current;
 
   const openBillingSheet = (cat: Category, item: TemplateItem) => {
+    if (!isPro && allExpenses.length >= FREE_LIMIT) { openPaywall(); return; }
     const today = new Date(); today.setHours(0, 0, 0, 0);
     setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     const billingPlan = (!item.cycle || item.cycle === 'monthly') && (item.amount !== undefined || !item.yearlyAmount) ? 'monthly' : 'yearly';
@@ -672,6 +678,7 @@ function ExpenseModal({
   };
 
   const openGroupBillingSheet = (cat: Category, plans: TemplateItem[]) => {
+    if (!isPro && allExpenses.length >= FREE_LIMIT) { openPaywall(); return; }
     const today = new Date(); today.setHours(0, 0, 0, 0);
     setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     const first = plans[0];
@@ -1565,6 +1572,8 @@ function ExpenseModal({
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, setExpenses } = useExpenses();
+  const { isPro, openPaywall } = usePro();
+  const [adVisible, setAdVisible] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -1624,6 +1633,7 @@ export default function HomeScreen() {
   });
 
   const openAdd = () => {
+    if (!isPro && expenses.length >= FREE_LIMIT) { openPaywall(); return; }
     setEditId(null);
     setForm(blankForm());
     setModalVisible(true);
@@ -1674,11 +1684,13 @@ export default function HomeScreen() {
       editId ? prev.map(e => e.id === editId ? exp : e) : [...prev, exp]
     );
     setModalVisible(false);
+    if (!editId && !isPro) setAdVisible(true);
   };
 
   const handleQuickAdd = (exp: Expense) => {
     setExpenses(prev => [...prev, exp]);
     setModalVisible(false);
+    if (!isPro) setAdVisible(true);
   };
 
   const handleDelete = (id: string) => {
@@ -1701,7 +1713,16 @@ export default function HomeScreen() {
           <Text style={s.summaryMonthLabel}>月額見込み</Text>
           <Text style={s.summaryMonthVal}>{yen(dispMonthly)}</Text>
           <View style={s.summaryBottomRow}>
-            <Text style={s.summaryCountTxt}>{expenses.length}件登録</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={s.summaryCountTxt}>{expenses.length}件登録</Text>
+              {!isPro && (
+                <TouchableOpacity onPress={openPaywall} activeOpacity={0.8}>
+                  <Text style={s.freeRemaining}>
+                    無料 {Math.max(0, FREE_LIMIT - expenses.length)}件残り
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={s.summaryAnnualTxt}>年間 {yen(dispAnnual)}</Text>
           </View>
         </View>
@@ -1767,6 +1788,7 @@ export default function HomeScreen() {
         onClose={() => setModalVisible(false)}
         onQuickAdd={handleQuickAdd}
       />
+      <InterstitialAdModal visible={adVisible} onClose={() => setAdVisible(false)} />
     </View>
   );
 }
@@ -1785,6 +1807,7 @@ const s = StyleSheet.create({
   summaryBottomRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 6 },
   summaryAnnualTxt:  { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
   summaryCountTxt:   { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginTop: 4 },
+  freeRemaining:     { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '700', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginTop: 4 },
   nextBox:           { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   nextLabel:         { fontSize: 11, fontWeight: '700', color: '#A0AEC0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   nextRow:           { flexDirection: 'row', alignItems: 'center', gap: 8 },

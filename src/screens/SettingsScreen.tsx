@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings, type NotifyTarget } from '../context/SettingsContext';
 import { useExpenses } from '../context/ExpensesContext';
+import { usePro, FREE_LIMIT } from '../context/ProContext';
 import {
   requestNotificationPermission,
   scheduleExpenseNotifications,
@@ -15,6 +16,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { notifSettings, setNotifSettings } = useSettings();
   const { expenses } = useExpenses();
+  const { isPro, openPaywall } = usePro();
   const [daysInput, setDaysInput] = useState('');
 
   useEffect(() => {
@@ -76,6 +78,31 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* プロプラン */}
+        <View style={c.section}>
+          <Text style={c.sectionTitle}>プロプラン</Text>
+          {isPro ? (
+            <View style={c.proRow}>
+              <View style={c.proIcon}><Ionicons name="star" size={20} color="#475569" /></View>
+              <View style={c.rowText}>
+                <Text style={c.rowLabel}>プロプラン 契約中</Text>
+                <Text style={c.rowSub}>広告なし・登録無制限</Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={c.upgradeBtn} onPress={openPaywall} activeOpacity={0.85}>
+              <View style={c.proIcon}><Ionicons name="star-outline" size={20} color="#fff" /></View>
+              <View style={c.rowText}>
+                <Text style={c.upgradeBtnTitle}>プロにアップグレード</Text>
+                <Text style={c.upgradeBtnSub}>
+                  現在 {expenses.length}/{FREE_LIMIT}件　広告あり → 無制限・広告なしへ
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* 通知セクション */}
         <View style={c.section}>
           <Text style={c.sectionTitle}>通知設定</Text>
@@ -205,4 +232,10 @@ const c = StyleSheet.create({
   dayTag:          { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' },
   dayTagTxt:       { fontSize: 12, fontWeight: '600', color: '#475569' },
   version:        { textAlign: 'center', fontSize: 12, color: '#CBD5E0', marginTop: 8 },
+
+  proRow:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  proIcon:        { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  upgradeBtn:     { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#475569', borderRadius: 14, padding: 14 },
+  upgradeBtnTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  upgradeBtnSub:  { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 });

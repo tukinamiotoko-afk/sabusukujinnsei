@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExpensesProvider } from './src/context/ExpensesContext';
 import { SettingsProvider } from './src/context/SettingsContext';
+import { ProProvider } from './src/context/ProContext';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PaywallScreen from './src/screens/PaywallScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 
 enableScreens();
@@ -87,13 +89,16 @@ export default function App() {
       {!onboardingDone ? (
         <OnboardingScreen onDone={finishOnboarding} />
       ) : (
-        <ExpensesProvider>
-          <SettingsProvider>
-            <NavigationContainer>
-              <TabNavigator />
-            </NavigationContainer>
-          </SettingsProvider>
-        </ExpensesProvider>
+        <ProProvider>
+          <ExpensesProvider>
+            <SettingsProvider>
+              <NavigationContainer>
+                <TabNavigator />
+              </NavigationContainer>
+              <PaywallScreen />
+            </SettingsProvider>
+          </ExpensesProvider>
+        </ProProvider>
       )}
     </SafeAreaProvider>
   );
