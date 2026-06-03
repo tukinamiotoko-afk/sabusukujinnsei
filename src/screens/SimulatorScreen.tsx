@@ -397,8 +397,8 @@ const s = StyleSheet.create({
   summarySub:       { fontSize: 13, color: '#A0AEC0' },
   reductionRow:     { gap: 6, marginTop: 10 },
   reductionDivider: { height: 1, backgroundColor: '#EDF2F7', marginBottom: 4 },
-  reductionLabel:   { fontSize: 13, color: '#10B981', fontWeight: '600' },
-  reductionAmount:  { fontSize: 22, fontWeight: '800', color: '#10B981' },
+  reductionLabel:   { fontSize: 13, color: '#FC5A5A', fontWeight: '600' },
+  reductionAmount:  { fontSize: 22, fontWeight: '800', color: '#FC5A5A' },
 
   // ボトムバー
   bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 12, flexDirection: 'row', gap: 10 },

@@ -641,11 +641,22 @@ function ExpenseModal({
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
 
   // プラン選択ボトムシート
-  const [billingItem, setBillingItem] = useState<{ cat: Category; item: TemplateItem } | null>(null);
+  const [billingItem, setBillingItem] = useState<{
+    cat: Category; item: TemplateItem;
+    plan: 'monthly' | 'yearly';
+    tempDay: string; tempNextDate: Date;
+  } | null>(null);
   const billingAnim = useRef(new Animated.Value(500)).current;
 
   const openBillingSheet = (cat: Category, item: TemplateItem) => {
-    setBillingItem({ cat, item });
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setBillingItem({
+      cat, item,
+      plan: item.amount !== undefined ? 'monthly' : 'yearly',
+      tempDay: String(today.getDate()),
+      tempNextDate: today,
+    });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
 
@@ -654,8 +665,28 @@ function ExpenseModal({
       .start(() => { setBillingItem(null); then?.(); });
   };
 
-  const handleBillingSelect = (cat: Category, item: TemplateItem) => {
-    closeBillingSheet(() => openQuickPanel(cat, item));
+  const handleBillingConfirm = () => {
+    if (!billingItem) return;
+    const { cat, item, plan, tempDay, tempNextDate } = billingItem;
+    const amount = plan === 'yearly' ? item.yearlyAmount! : (item.amount ?? 0);
+    let nextDate: Date;
+    if (plan === 'yearly') {
+      nextDate = tempNextDate;
+    } else {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const n = parseInt(tempDay, 10);
+      if (n >= 1 && n <= 31) {
+        let y = today.getFullYear(), m = today.getMonth();
+        const candidate = new Date(y, m, n);
+        if (candidate < today) { m++; if (m > 11) { m = 0; y++; } }
+        nextDate = new Date(y, m, n);
+      } else { nextDate = today; }
+    }
+    const exp: Expense = {
+      id: genId(), name: item.name, amount, category: cat,
+      cycle: plan, nextDate: nextDate.toISOString(), memo: '',
+    };
+    closeBillingSheet(() => onQuickAdd(exp));
   };
 
   // クイック追加パネル
@@ -1133,108 +1164,9 @@ function ExpenseModal({
           </Animated.View>
         )}
 
-        {/* 年間支払日カレンダーシート */}
-        {calSheet && (() => {
-          const y = calViewMonth.getFullYear();
-          const mo = calViewMonth.getMonth();
-          const firstDow = new Date(y, mo, 1).getDay();
-          const daysInMonth = new Date(y, mo + 1, 0).getDate();
-          const selD = quickItem?.tempNextDate;
-          const isSel = (d: number) =>
-            selD && selD.getFullYear() === y && selD.getMonth() === mo && selD.getDate() === d;
-          const cells: (number | null)[] = [
-            ...Array(firstDow).fill(null),
-            ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-          ];
-          while (cells.length % 7 !== 0) cells.push(null);
-          const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
-          return (
-            <>
-              <TouchableOpacity
-                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-                onPress={closeCalSheet}
-                activeOpacity={1}
-              />
-              <Animated.View style={[s.calSheet, { transform: [{ translateY: calSheetAnim }] }]}>
-                {/* ドラッグハンドル */}
-                <View style={s.calHandle} />
-
-                {/* 月ナビ */}
-                <View style={s.calNavRow}>
-                  <TouchableOpacity
-                    style={s.calNavBtn}
-                    onPress={() => setCalViewMonth(new Date(y, mo - 1, 1))}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chevron-back" size={22} color="#475569" />
-                  </TouchableOpacity>
-                  <Text style={s.calNavTitle}>{y}年 {mo + 1}月</Text>
-                  <TouchableOpacity
-                    style={s.calNavBtn}
-                    onPress={() => setCalViewMonth(new Date(y, mo + 1, 1))}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chevron-forward" size={22} color="#475569" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* 曜日ヘッダ */}
-                <View style={s.calDowRow}>
-                  {DOW_LABELS.map((l, i) => (
-                    <Text
-                      key={l}
-                      style={[s.calDowLabel, i === 0 && s.calDowSun, i === 6 && s.calDowSat]}
-                    >
-                      {l}
-                    </Text>
-                  ))}
-                </View>
-
-                {/* 日グリッド */}
-                <View style={s.calGrid}>
-                  {cells.map((d, idx) => {
-                    const col = idx % 7;
-                    const sel = d !== null && isSel(d);
-                    return (
-                      <TouchableOpacity
-                        key={idx}
-                        style={[s.calCell, sel && s.calCellSel]}
-                        onPress={() => {
-                          if (!d || !quickItem) return;
-                          const today = new Date(); today.setHours(0, 0, 0, 0);
-                          let ny = y;
-                          const candidate = new Date(y, mo, d);
-                          if (candidate < today) { ny = y + 1; }
-                          setQuickItem(q => q && ({ ...q, tempNextDate: new Date(ny, mo, d) }));
-                          closeCalSheet();
-                        }}
-                        activeOpacity={d ? 0.7 : 1}
-                        disabled={!d}
-                      >
-                        {d !== null && (
-                          <Text style={[
-                            s.calCellText,
-                            col === 0 && s.calCellSun,
-                            col === 6 && s.calCellSat,
-                            sel    && s.calCellTextSel,
-                          ]}>
-                            {d}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={s.calTapHint}>日付をタップして確定</Text>
-              </Animated.View>
-            </>
-          );
-        })()}
-
-        {/* プラン選択ボトムシート */}
+        {/* プラン選択ボトムシート（calSheetより先に描画→calSheetが上に重なる） */}
         {billingItem && (() => {
-          const { cat, item } = billingItem;
+          const { cat, item, plan, tempDay, tempNextDate } = billingItem;
           const { color: catColor, icon: catIcon } = CAT[cat];
           return (
             <>
@@ -1255,38 +1187,142 @@ function ExpenseModal({
                   }
                   <Text style={s.billingSheetName}>{item.name}</Text>
                 </View>
-                {/* 月払いプラン */}
-                {item.amount !== undefined && (
-                  <TouchableOpacity
-                    style={s.billingPlanRow}
-                    onPress={() => handleBillingSelect(cat, item)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={s.billingPlanLeft}>
-                      <Text style={s.billingPlanLabel}>月払い</Text>
-                      <Text style={s.billingPlanAmt}>
-                        {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}<Text style={s.billingPlanPer}>/月</Text>
+
+                {/* プラン選択 */}
+                <View style={s.billingPlanPicker}>
+                  {item.amount !== undefined && (
+                    <TouchableOpacity
+                      style={[s.billingPlanOpt, plan === 'monthly' && s.billingPlanOptSel]}
+                      onPress={() => setBillingItem(b => b && ({ ...b, plan: 'monthly' }))}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[s.billingPlanOptLabel, plan === 'monthly' && s.billingPlanOptLabelSel]}>月払い</Text>
+                      <Text style={[s.billingPlanOptAmt, plan === 'monthly' && s.billingPlanOptAmtSel]}>
+                        {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
+                        <Text style={s.billingPlanOptPer}>/月</Text>
                       </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color="#CBD5E0" />
+                    </TouchableOpacity>
+                  )}
+                  {item.yearlyAmount !== undefined && (
+                    <TouchableOpacity
+                      style={[s.billingPlanOpt, s.billingPlanOptYear, plan === 'yearly' && s.billingPlanOptYearSel]}
+                      onPress={() => setBillingItem(b => b && ({ ...b, plan: 'yearly' }))}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[s.billingPlanOptLabel, plan === 'yearly' && s.billingPlanOptLabelYearSel]}>年払い</Text>
+                      <Text style={[s.billingPlanOptAmt, plan === 'yearly' && s.billingPlanOptAmtYearSel]}>
+                        {item.currency === 'USD' ? `$${item.yearlyAmount}` : yen(item.yearlyAmount)}
+                        <Text style={s.billingPlanOptPer}>/年</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* 支払日 */}
+                <Text style={s.qaDayPrompt}>支払日</Text>
+                {plan === 'monthly' ? (
+                  <View style={[s.qaDayRow, { marginTop: 10 }]}>
+                    <Text style={s.qaDayLabel}>毎月</Text>
+                    <TextInput
+                      style={s.qaDayInput}
+                      value={tempDay}
+                      onChangeText={v => setBillingItem(b => b && ({ ...b, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
+                      placeholder="15"
+                      placeholderTextColor="#CBD5E0"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                    <Text style={s.qaDayLabel}>日払い</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[s.qaDatePickerRow, { marginTop: 10 }]}
+                    onPress={openCalSheet}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color="#475569" />
+                    <Text style={s.qaDatePickerText}>{format(tempNextDate, 'M月d日(E)', { locale: ja })}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#94A3B8" />
                   </TouchableOpacity>
                 )}
-                {/* 年払いプラン */}
-                {item.yearlyAmount !== undefined && (
-                  <TouchableOpacity
-                    style={[s.billingPlanRow, s.billingPlanRowYear]}
-                    onPress={() => handleBillingSelect(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}
-                    activeOpacity={0.75}
-                  >
-                    <View style={s.billingPlanLeft}>
-                      <Text style={[s.billingPlanLabel, s.billingPlanLabelYear]}>年払い</Text>
-                      <Text style={[s.billingPlanAmt, s.billingPlanAmtYear]}>
-                        {item.currency === 'USD' ? `$${item.yearlyAmount}` : yen(item.yearlyAmount)}<Text style={s.billingPlanPer}>/年</Text>
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color="#CBD5E0" />
+
+                {/* 登録する */}
+                <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={handleBillingConfirm} activeOpacity={0.85}>
+                  <Text style={s.qaBtnText}>登録する</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </>
+          );
+        })()}
+
+        {/* 年間支払日カレンダーシート（billingSheetより後に描画→最前面） */}
+        {calSheet && (() => {
+          const y = calViewMonth.getFullYear();
+          const mo = calViewMonth.getMonth();
+          const firstDow = new Date(y, mo, 1).getDay();
+          const daysInMonth = new Date(y, mo + 1, 0).getDate();
+          const selD = billingItem ? billingItem.tempNextDate : quickItem?.tempNextDate;
+          const isSel = (d: number) =>
+            selD && selD.getFullYear() === y && selD.getMonth() === mo && selD.getDate() === d;
+          const cells: (number | null)[] = [
+            ...Array(firstDow).fill(null),
+            ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+          ];
+          while (cells.length % 7 !== 0) cells.push(null);
+          const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+          return (
+            <>
+              <TouchableOpacity
+                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
+                onPress={closeCalSheet}
+                activeOpacity={1}
+              />
+              <Animated.View style={[s.calSheet, { transform: [{ translateY: calSheetAnim }] }]}>
+                <View style={s.calHandle} />
+                <View style={s.calNavRow}>
+                  <TouchableOpacity style={s.calNavBtn} onPress={() => setCalViewMonth(new Date(y, mo - 1, 1))} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={22} color="#475569" />
                   </TouchableOpacity>
-                )}
+                  <Text style={s.calNavTitle}>{y}年 {mo + 1}月</Text>
+                  <TouchableOpacity style={s.calNavBtn} onPress={() => setCalViewMonth(new Date(y, mo + 1, 1))} activeOpacity={0.7}>
+                    <Ionicons name="chevron-forward" size={22} color="#475569" />
+                  </TouchableOpacity>
+                </View>
+                <View style={s.calDowRow}>
+                  {DOW_LABELS.map((l, i) => (
+                    <Text key={l} style={[s.calDowLabel, i === 0 && s.calDowSun, i === 6 && s.calDowSat]}>{l}</Text>
+                  ))}
+                </View>
+                <View style={s.calGrid}>
+                  {cells.map((d, idx) => {
+                    const col = idx % 7;
+                    const sel = d !== null && isSel(d);
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[s.calCell, sel && s.calCellSel]}
+                        onPress={() => {
+                          if (!d) return;
+                          const today = new Date(); today.setHours(0, 0, 0, 0);
+                          const ny = new Date(y, mo, d) < today ? y + 1 : y;
+                          const newDate = new Date(ny, mo, d);
+                          if (billingItem) { setBillingItem(b => b && ({ ...b, tempNextDate: newDate })); }
+                          else { setQuickItem(q => q && ({ ...q, tempNextDate: newDate })); }
+                          closeCalSheet();
+                        }}
+                        activeOpacity={d ? 0.7 : 1}
+                        disabled={!d}
+                      >
+                        {d !== null && (
+                          <Text style={[s.calCellText, col === 0 && s.calCellSun, col === 6 && s.calCellSat, sel && s.calCellTextSel]}>
+                            {d}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={s.calTapHint}>日付をタップして確定</Text>
               </Animated.View>
             </>
           );
@@ -1751,19 +1787,23 @@ const s = StyleSheet.create({
   calTapHint:       { textAlign: 'center', fontSize: 12, color: '#A0AEC0', marginTop: 10, marginBottom: 4 },
 
   // プラン選択ボトムシート
-  billingSheet:         { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: 40, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 16 },
-  billingSheetHandle:   { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 12, marginBottom: 12 },
-  billingSheetHead:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, marginBottom: 8 },
-  billingSheetIcon:     { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  billingSheetName:     { flex: 1, fontSize: 16, fontWeight: '700', color: '#1A202C' },
-  billingPlanRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: '#EDF2F7' },
-  billingPlanRowYear:   { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-  billingPlanLeft:      { flex: 1 },
-  billingPlanLabel:     { fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 2 },
-  billingPlanLabelYear: { color: '#D97706' },
-  billingPlanAmt:       { fontSize: 22, fontWeight: '800', color: '#1A202C' },
-  billingPlanAmtYear:   { color: '#D97706' },
-  billingPlanPer:       { fontSize: 13, fontWeight: '400', color: '#94A3B8' },
+  billingSheet:             { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: 40, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 16 },
+  billingSheetHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 12, marginBottom: 12 },
+  billingSheetHead:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, marginBottom: 12 },
+  billingSheetIcon:         { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  billingSheetName:         { flex: 1, fontSize: 16, fontWeight: '700', color: '#1A202C' },
+  billingPlanPicker:        { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  billingPlanOpt:           { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 2, borderColor: '#EDF2F7', alignItems: 'center', gap: 4 },
+  billingPlanOptSel:        { backgroundColor: '#475569', borderColor: '#475569' },
+  billingPlanOptYear:       { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+  billingPlanOptYearSel:    { backgroundColor: '#D97706', borderColor: '#D97706' },
+  billingPlanOptLabel:      { fontSize: 11, fontWeight: '700', color: '#64748B' },
+  billingPlanOptLabelSel:   { color: '#fff' },
+  billingPlanOptLabelYearSel: { color: '#fff' },
+  billingPlanOptAmt:        { fontSize: 18, fontWeight: '800', color: '#1A202C' },
+  billingPlanOptAmtSel:     { color: '#fff' },
+  billingPlanOptAmtYearSel: { color: '#fff' },
+  billingPlanOptPer:        { fontSize: 11, fontWeight: '400', color: '#94A3B8' },
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
