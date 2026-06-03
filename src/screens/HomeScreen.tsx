@@ -261,12 +261,14 @@ function BillingButtons({ item, cat, onDirectAdd }: {
 function TemplateBrowser({
   onDirectAdd,
   onBillingOpen,
+  onGroupBillingOpen,
   activeCategory, setActiveCategory,
   activeSubcat, setActiveSubcat,
   activeGroup, setActiveGroup,
 }: {
   onDirectAdd: (cat: Category, item: TemplateItem) => void;
   onBillingOpen: (cat: Category, item: TemplateItem) => void;
+  onGroupBillingOpen: (cat: Category, plans: TemplateItem[]) => void;
   activeCategory: Category | null; setActiveCategory: (c: Category | null) => void;
   activeSubcat: string | null;     setActiveSubcat:   (s: string | null) => void;
   activeGroup: string | null;      setActiveGroup:    (g: string | null) => void;
@@ -409,7 +411,11 @@ function TemplateBrowser({
             if (entry.type === 'group') {
               return (
                 <TouchableOpacity key={i} style={s.tmplGridCard}
-                  onPress={() => setActiveGroup(entry.key)} activeOpacity={0.75}>
+                  onPress={() => {
+                    const hasLocal = entry.items.some(p => (p.amount !== undefined && p.currency !== 'USD') || p.yearlyAmount !== undefined);
+                    if (hasLocal && activeCategory) { onGroupBillingOpen(activeCategory, entry.items); }
+                    else { setActiveGroup(entry.key); }
+                  }} activeOpacity={0.75}>
                   {hasServiceIcon(entry.key)
                     ? <ServiceIcon name={entry.key} size={40} />
                     : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
@@ -646,6 +652,8 @@ function ExpenseModal({
     cat: Category; item: TemplateItem;
     plan: 'monthly' | 'yearly';
     tempDay: string; tempNextDate: Date;
+    groupPlans?: TemplateItem[];
+    selectedPlanIdx: number;
   } | null>(null);
   const billingAnim = useRef(new Animated.Value(500)).current;
 
@@ -653,8 +661,21 @@ function ExpenseModal({
     const today = new Date(); today.setHours(0, 0, 0, 0);
     setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setBillingItem({
-      cat, item,
+      cat, item, selectedPlanIdx: 0,
       plan: (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly',
+      tempDay: String(today.getDate()),
+      tempNextDate: today,
+    });
+    Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+  };
+
+  const openGroupBillingSheet = (cat: Category, plans: TemplateItem[]) => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    const first = plans[0];
+    setBillingItem({
+      cat, item: first, groupPlans: plans, selectedPlanIdx: 0,
+      plan: (first.cycle === 'yearly' || first.amount === undefined) ? 'yearly' : 'monthly',
       tempDay: String(today.getDate()),
       tempNextDate: today,
     });
@@ -955,6 +976,7 @@ function ExpenseModal({
               <TemplateBrowser
                 onDirectAdd={openQuickPanel}
                 onBillingOpen={openBillingSheet}
+                onGroupBillingOpen={openGroupBillingSheet}
                 activeCategory={tmplCat}    setActiveCategory={setTmplCat}
                 activeSubcat={tmplSubcat}   setActiveSubcat={setTmplSubcat}
                 activeGroup={tmplGroup}     setActiveGroup={setTmplGroup}
@@ -1169,10 +1191,11 @@ function ExpenseModal({
 
         {/* プラン選択ボトムシート（calSheetより先に描画→calSheetが上に重なる） */}
         {billingItem && (() => {
-          const { cat, item, plan, tempDay, tempNextDate } = billingItem;
+          const { cat, item, plan, tempDay, tempNextDate, groupPlans, selectedPlanIdx } = billingItem;
           const { color: catColor, icon: catIcon } = CAT[cat];
           const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
           const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
+          const groupName = groupPlans ? (item.group ?? item.name) : item.name;
           return (
             <>
               <TouchableOpacity
@@ -1191,8 +1214,8 @@ function ExpenseModal({
                       </View>
                   }
                   <View style={{ flex: 1 }}>
-                    <Text style={s.billingSheetName}>{item.name}</Text>
-                    {!hasBothPlans && (
+                    <Text style={s.billingSheetName}>{groupName}</Text>
+                    {!hasBothPlans && !groupPlans && (
                       <Text style={s.billingSheetSinglePrice}>
                         {item.currency === 'USD'
                           ? `$${effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount}`
@@ -1203,7 +1226,37 @@ function ExpenseModal({
                   </View>
                 </View>
 
-                {/* プラン選択（月払い・年払い両方ある場合のみ） */}
+                {/* グループ内プラン選択チップ */}
+                {groupPlans && groupPlans.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={{ marginBottom: 14 }}
+                    contentContainerStyle={{ gap: 8, paddingHorizontal: 2, paddingBottom: 4 }}
+                  >
+                    {groupPlans.map((p, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={[s.groupPlanChip, selectedPlanIdx === i && s.groupPlanChipSel]}
+                        onPress={() => {
+                          const newPlan: 'monthly' | 'yearly' = (p.cycle === 'yearly' || p.amount === undefined) ? 'yearly' : 'monthly';
+                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan }));
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[s.groupPlanChipName, selectedPlanIdx === i && s.groupPlanChipNameSel]}>
+                          {p.planName ?? p.name}
+                        </Text>
+                        <Text style={[s.groupPlanChipAmt, selectedPlanIdx === i && s.groupPlanChipAmtSel]}>
+                          {p.currency === 'USD' ? `$${p.amount}` : yen(p.amount ?? 0)}
+                          <Text style={[s.groupPlanChipPer, selectedPlanIdx === i && s.groupPlanChipPerSel]}>/月</Text>
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+
+                {/* 月払い・年払い切り替え（両方ある場合のみ） */}
                 {hasBothPlans && (
                   <View style={s.billingPlanPicker}>
                     <TouchableOpacity
@@ -1819,6 +1872,16 @@ const s = StyleSheet.create({
   billingPlanOptAmtSel:     { color: '#fff' },
   billingPlanOptAmtYearSel: { color: '#fff' },
   billingPlanOptPer:        { fontSize: 11, fontWeight: '400', color: '#94A3B8' },
+
+  // グループ内プラン選択チップ
+  groupPlanChip:        { backgroundColor: '#F1F5F9', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center', minWidth: 80, borderWidth: 2, borderColor: '#EDF2F7' },
+  groupPlanChipSel:     { backgroundColor: '#475569', borderColor: '#475569' },
+  groupPlanChipName:    { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 4 },
+  groupPlanChipNameSel: { color: '#fff' },
+  groupPlanChipAmt:     { fontSize: 13, fontWeight: '800', color: '#1A202C' },
+  groupPlanChipAmtSel:  { color: '#fff' },
+  groupPlanChipPer:     { fontSize: 10, fontWeight: '400', color: '#94A3B8' },
+  groupPlanChipPerSel:  { color: 'rgba(255,255,255,0.6)' },
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
