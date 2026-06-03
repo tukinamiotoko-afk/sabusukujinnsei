@@ -1,10 +1,13 @@
 import React from 'react';
+import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { ExpensesProvider } from './src/context/ExpensesContext';
+
+enableScreens();
 import HomeScreen from './src/screens/HomeScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SimulatorScreen from './src/screens/SimulatorScreen';
