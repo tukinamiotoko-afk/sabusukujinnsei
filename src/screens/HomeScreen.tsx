@@ -650,7 +650,7 @@ function ExpenseModal({
     cat: Category; item: TemplateItem;
     plan: 'monthly' | 'yearly';
     tempDay: string; tempNextDate: Date;
-    tempAmount: string;
+    tempAmount: string; tempCycleDays: string;
     groupPlans?: TemplateItem[];
     selectedPlanIdx: number;
   } | null>(null);
@@ -663,9 +663,9 @@ function ExpenseModal({
     setBillingItem({
       cat, item, selectedPlanIdx: 0,
       plan: billingPlan,
-      tempDay: String(today.getDate()),
-      tempNextDate: today,
+      tempDay: '', tempNextDate: today,
       tempAmount: item.amount !== undefined && item.currency !== 'USD' ? String(item.amount) : '',
+      tempCycleDays: '',
     });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
@@ -678,9 +678,9 @@ function ExpenseModal({
     setBillingItem({
       cat, item: first, groupPlans: plans, selectedPlanIdx: 0,
       plan: billingPlan,
-      tempDay: String(today.getDate()),
-      tempNextDate: today,
+      tempDay: '', tempNextDate: today,
       tempAmount: first.amount !== undefined && first.currency !== 'USD' ? String(first.amount) : '',
+      tempCycleDays: '',
     });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
@@ -692,7 +692,7 @@ function ExpenseModal({
 
   const handleBillingConfirm = () => {
     if (!billingItem) return;
-    const { cat, item, plan, tempDay, tempNextDate, tempAmount } = billingItem;
+    const { cat, item, plan, tempDay, tempNextDate, tempAmount, tempCycleDays } = billingItem;
     const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
     const isMonthlyMode = (!item.cycle || item.cycle === 'monthly') && (item.amount !== undefined || !item.yearlyAmount);
     const effectivePlan: 'monthly' | 'yearly' = hasBothPlans ? plan : (isMonthlyMode ? 'monthly' : 'yearly');
@@ -702,6 +702,8 @@ function ExpenseModal({
       Alert.alert('入力エラー', '金額を入力してください');
       return;
     }
+    const cycleDays = parseInt(tempCycleDays, 10);
+    const useCustomCycle = cycleDays > 0;
     let nextDate: Date;
     if (effectivePlan === 'yearly') {
       nextDate = tempNextDate;
@@ -715,9 +717,11 @@ function ExpenseModal({
         nextDate = new Date(y, m, n);
       } else { nextDate = today; }
     }
+    const registeredCycle = hasBothPlans ? plan : useCustomCycle ? 'custom' : (item.cycle ?? 'monthly');
     const exp: Expense = {
       id: genId(), name: item.name, amount, category: cat,
-      cycle: hasBothPlans ? plan : (item.cycle ?? 'monthly'),
+      cycle: registeredCycle,
+      customCycleDays: useCustomCycle ? cycleDays : undefined,
       nextDate: nextDate.toISOString(), memo: '',
     };
     closeBillingSheet(() => onQuickAdd(exp));
@@ -885,7 +889,7 @@ function ExpenseModal({
   };
 
   const openPayPanel = () => {
-    if (form.cycle === 'monthly') setDayInput(String(form.nextDate.getDate()));
+    setDayInput('');
     setPayPanel(true);
     Animated.timing(paySlideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
   };
@@ -1201,7 +1205,7 @@ function ExpenseModal({
 
         {/* プラン選択ボトムシート（calSheetより先に描画→calSheetが上に重なる） */}
         {billingItem && (() => {
-          const { cat, item, plan, tempDay, tempNextDate, tempAmount, groupPlans, selectedPlanIdx } = billingItem;
+          const { cat, item, plan, tempDay, tempNextDate, tempAmount, tempCycleDays, groupPlans, selectedPlanIdx } = billingItem;
           const { color: catColor, icon: catIcon } = CAT[cat];
           const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
           const isMonthlyMode = (!item.cycle || item.cycle === 'monthly') && (item.amount !== undefined || !item.yearlyAmount);
@@ -1254,7 +1258,7 @@ function ExpenseModal({
                         onPress={() => {
                           const newIsMonthly = (!p.cycle || p.cycle === 'monthly') && (p.amount !== undefined || !p.yearlyAmount);
                           const newPlan: 'monthly' | 'yearly' = newIsMonthly ? 'monthly' : 'yearly';
-                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan, tempAmount: p.amount !== undefined && p.currency !== 'USD' ? String(p.amount) : '' }));
+                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan, tempAmount: p.amount !== undefined && p.currency !== 'USD' ? String(p.amount) : '', tempCycleDays: '' }));
                         }}
                         activeOpacity={0.75}
                       >
@@ -1316,6 +1320,25 @@ function ExpenseModal({
                   </View>
                 )}
 
+                {/* 支払周期（月一回以外の固定費向け） */}
+                {effectivePlan === 'yearly' && item.cycle !== 'yearly' && !hasBothPlans && (
+                  <View style={s.billingAmtSection}>
+                    <Text style={s.qaDayPrompt}>支払周期</Text>
+                    <View style={[s.qaDayRow, { marginTop: 10 }]}>
+                      <TextInput
+                        style={s.qaDayInput}
+                        value={tempCycleDays}
+                        onChangeText={v => setBillingItem(b => b && ({ ...b, tempCycleDays: v.replace(/[^0-9]/g, '') }))}
+                        placeholder=""
+                        placeholderTextColor="#CBD5E0"
+                        keyboardType="number-pad"
+                        maxLength={3}
+                      />
+                      <Text style={s.qaDayLabel}>日ごと</Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* 支払日 */}
                 <Text style={s.qaDayPrompt}>支払日</Text>
                 {effectivePlan === 'monthly' ? (
@@ -1325,7 +1348,7 @@ function ExpenseModal({
                       style={s.qaDayInput}
                       value={tempDay}
                       onChangeText={v => setBillingItem(b => b && ({ ...b, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
-                      placeholder="15"
+                      placeholder=""
                       placeholderTextColor="#CBD5E0"
                       keyboardType="number-pad"
                       maxLength={2}
