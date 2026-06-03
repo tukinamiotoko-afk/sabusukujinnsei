@@ -306,6 +306,10 @@ function TemplateBrowser({
     </View>
   );
 
+  const handleCardTap = (cat: Category, item: TemplateItem) => {
+    onBillingOpen(cat, item);
+  };
+
   // 検索中
   if (search.trim()) {
     return (
@@ -362,13 +366,6 @@ function TemplateBrowser({
       );
     }
     return null;
-  };
-
-  const handleCardTap = (cat: Category, item: TemplateItem) => {
-    if (item.currency === 'USD') { onDirectAdd(cat, item); return; }
-    const cycle = item.cycle ?? 'monthly';
-    if (cycle !== 'monthly' && cycle !== 'yearly') { onDirectAdd(cat, item); return; }
-    onBillingOpen(cat, item);
   };
 
   // Level 3: プラン一覧
@@ -662,12 +659,13 @@ function ExpenseModal({
   const openBillingSheet = (cat: Category, item: TemplateItem) => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    const billingPlan = (!item.cycle || item.cycle === 'monthly') && (item.amount !== undefined || !item.yearlyAmount) ? 'monthly' : 'yearly';
     setBillingItem({
       cat, item, selectedPlanIdx: 0,
-      plan: (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly',
+      plan: billingPlan,
       tempDay: String(today.getDate()),
       tempNextDate: today,
-      tempAmount: item.amount !== undefined ? String(item.amount) : '',
+      tempAmount: item.amount !== undefined && item.currency !== 'USD' ? String(item.amount) : '',
     });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
@@ -676,12 +674,13 @@ function ExpenseModal({
     const today = new Date(); today.setHours(0, 0, 0, 0);
     setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     const first = plans[0];
+    const billingPlan = (!first.cycle || first.cycle === 'monthly') && (first.amount !== undefined || !first.yearlyAmount) ? 'monthly' : 'yearly';
     setBillingItem({
       cat, item: first, groupPlans: plans, selectedPlanIdx: 0,
-      plan: (first.cycle === 'yearly' || first.amount === undefined) ? 'yearly' : 'monthly',
+      plan: billingPlan,
       tempDay: String(today.getDate()),
       tempNextDate: today,
-      tempAmount: first.amount !== undefined ? String(first.amount) : '',
+      tempAmount: first.amount !== undefined && first.currency !== 'USD' ? String(first.amount) : '',
     });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
@@ -695,8 +694,9 @@ function ExpenseModal({
     if (!billingItem) return;
     const { cat, item, plan, tempDay, tempNextDate, tempAmount } = billingItem;
     const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
-    const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
-    const presetAmt = effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount;
+    const isMonthlyMode = (!item.cycle || item.cycle === 'monthly') && (item.amount !== undefined || !item.yearlyAmount);
+    const effectivePlan: 'monthly' | 'yearly' = hasBothPlans ? plan : (isMonthlyMode ? 'monthly' : 'yearly');
+    const presetAmt = item.currency === 'USD' ? undefined : effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount;
     const amount = presetAmt !== undefined ? presetAmt : (parseInt(tempAmount, 10) || 0);
     if (amount <= 0) {
       Alert.alert('入力エラー', '金額を入力してください');
@@ -717,7 +717,8 @@ function ExpenseModal({
     }
     const exp: Expense = {
       id: genId(), name: item.name, amount, category: cat,
-      cycle: effectivePlan, nextDate: nextDate.toISOString(), memo: '',
+      cycle: hasBothPlans ? plan : (item.cycle ?? 'monthly'),
+      nextDate: nextDate.toISOString(), memo: '',
     };
     closeBillingSheet(() => onQuickAdd(exp));
   };
@@ -1203,9 +1204,10 @@ function ExpenseModal({
           const { cat, item, plan, tempDay, tempNextDate, tempAmount, groupPlans, selectedPlanIdx } = billingItem;
           const { color: catColor, icon: catIcon } = CAT[cat];
           const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
-          const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
+          const isMonthlyMode = (!item.cycle || item.cycle === 'monthly') && (item.amount !== undefined || !item.yearlyAmount);
+          const effectivePlan: 'monthly' | 'yearly' = hasBothPlans ? plan : (isMonthlyMode ? 'monthly' : 'yearly');
           const groupName = groupPlans ? (item.group ?? item.name) : item.name;
-          const presetAmt = effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount;
+          const presetAmt = item.currency === 'USD' ? undefined : effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount;
           const showAmtInput = presetAmt === undefined;
           return (
             <>
@@ -1250,8 +1252,9 @@ function ExpenseModal({
                         key={i}
                         style={[s.groupPlanChip, selectedPlanIdx === i && s.groupPlanChipSel]}
                         onPress={() => {
-                          const newPlan: 'monthly' | 'yearly' = (p.cycle === 'yearly' || p.amount === undefined) ? 'yearly' : 'monthly';
-                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan, tempAmount: p.amount !== undefined ? String(p.amount) : '' }));
+                          const newIsMonthly = (!p.cycle || p.cycle === 'monthly') && (p.amount !== undefined || !p.yearlyAmount);
+                          const newPlan: 'monthly' | 'yearly' = newIsMonthly ? 'monthly' : 'yearly';
+                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan, tempAmount: p.amount !== undefined && p.currency !== 'USD' ? String(p.amount) : '' }));
                         }}
                         activeOpacity={0.75}
                       >
