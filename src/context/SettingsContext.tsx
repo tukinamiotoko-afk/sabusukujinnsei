@@ -31,7 +31,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then(json => {
-      if (json) setNotifSettingsState(JSON.parse(json));
+      if (!json) return;
+      const parsed = JSON.parse(json);
+      // migrate: daysBefore was a single number in older versions
+      if (typeof parsed.daysBefore === 'number') {
+        parsed.daysBefore = [parsed.daysBefore];
+      }
+      setNotifSettingsState({ ...DEFAULT, ...parsed });
     });
   }, []);
 
