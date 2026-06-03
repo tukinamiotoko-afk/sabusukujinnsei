@@ -1131,6 +1131,7 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<FormState>(blankForm());
+  const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name'>('date');
 
   const monthlyTotal = expenses.reduce(
     (sum, e) => sum + monthlyEq(e.amount, e.cycle, e.customCycleDays), 0
@@ -1177,9 +1178,12 @@ export default function HomeScreen() {
     }).start();
   }, [monthlyTotal]);
 
-  const sorted = [...expenses].sort(
-    (a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime()
-  );
+  const sorted = [...expenses].sort((a, b) => {
+    if (sortKey === 'amountDesc') return monthlyEq(b.amount, b.cycle, b.customCycleDays) - monthlyEq(a.amount, a.cycle, a.customCycleDays);
+    if (sortKey === 'amountAsc')  return monthlyEq(a.amount, a.cycle, a.customCycleDays) - monthlyEq(b.amount, b.cycle, b.customCycleDays);
+    if (sortKey === 'name')       return a.name.localeCompare(b.name, 'ja');
+    return new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime();
+  });
 
   const openAdd = () => {
     setEditId(null);
@@ -1267,7 +1271,15 @@ export default function HomeScreen() {
 
       <View style={s.listHeader}>
         <Text style={s.listTitle}>登録一覧</Text>
-        <Text style={s.listCount}>{expenses.length}件</Text>
+        <View style={s.sortBtns}>
+          {(['date','amountDesc','amountAsc','name'] as const).map(k => (
+            <TouchableOpacity key={k} style={[s.sortBtn, sortKey === k && s.sortBtnActive]} onPress={() => setSortKey(k)}>
+              <Text style={[s.sortBtnTxt, sortKey === k && s.sortBtnTxtActive]}>
+                {k === 'date' ? '日付' : k === 'amountDesc' ? '金額↓' : k === 'amountAsc' ? '金額↑' : '名前'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <ScrollView
@@ -1345,6 +1357,11 @@ const s = StyleSheet.create({
   listHeader:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   listTitle:         { fontSize: 16, fontWeight: '700', color: '#1A202C' },
   listCount:         { fontSize: 13, color: '#A0AEC0' },
+  sortBtns:          { flexDirection: 'row', gap: 4 },
+  sortBtn:           { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: '#F1F5F9' },
+  sortBtnActive:     { backgroundColor: '#475569' },
+  sortBtnTxt:        { fontSize: 11, fontWeight: '600', color: '#64748B' },
+  sortBtnTxtActive:  { color: '#fff' },
   list:              { flex: 1 },
   listContent:       { paddingHorizontal: 16, gap: 8 },
   // スワイプカード

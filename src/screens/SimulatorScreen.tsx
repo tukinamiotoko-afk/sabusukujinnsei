@@ -31,6 +31,7 @@ export default function SimulatorScreen() {
   const { expenses, setExpenses } = useExpenses();
 
   const [checkedIds,    setCheckedIds]    = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<'amountDesc' | 'amountAsc' | 'name'>('amountDesc');
   const [cancelDoneIds, setCancelDoneIds] = useState<Set<string>>(new Set());
   const slideAnim = useRef(new Animated.Value(SCREEN_W)).current;
   const [cancelMode, setCancelMode] = useState(false);
@@ -39,12 +40,11 @@ export default function SimulatorScreen() {
     return expenses
       .map(e => ({ expense: e, monthly: monthlyEq(e.amount, e.cycle, e.customCycleDays) }))
       .sort((a, b) => {
-        if (a.monthly === 0 && b.monthly === 0) return 0;
-        if (a.monthly === 0) return 1;
-        if (b.monthly === 0) return -1;
+        if (sortKey === 'name') return a.expense.name.localeCompare(b.expense.name, 'ja');
+        if (sortKey === 'amountAsc') return a.monthly - b.monthly;
         return b.monthly - a.monthly;
       });
-  }, [expenses]);
+  }, [expenses, sortKey]);
 
   const checkedExpenses = useMemo(
     () => sortedExpenses.filter(({ expense }) => checkedIds.has(expense.id)),
@@ -198,7 +198,15 @@ export default function SimulatorScreen() {
         <View style={s.listSection}>
           <View style={s.listHeader}>
             <Text style={s.listTitle}>固定費一覧</Text>
-            <Text style={s.listCount}>{expenses.length}件</Text>
+            <View style={s.sortBtns}>
+              {(['amountDesc','amountAsc','name'] as const).map(k => (
+                <TouchableOpacity key={k} style={[s.sortBtn, sortKey === k && s.sortBtnActive]} onPress={() => setSortKey(k)}>
+                  <Text style={[s.sortBtnTxt, sortKey === k && s.sortBtnTxtActive]}>
+                    {k === 'amountDesc' ? '金額↓' : k === 'amountAsc' ? '金額↑' : '名前'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {sortedExpenses.length === 0 ? (
@@ -361,6 +369,11 @@ const s = StyleSheet.create({
   listHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
   listTitle:        { fontSize: 15, fontWeight: '700', color: '#1A202C' },
   listCount:        { fontSize: 13, color: '#A0AEC0' },
+  sortBtns:         { flexDirection: 'row', gap: 4 },
+  sortBtn:          { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: '#F1F5F9' },
+  sortBtnActive:    { backgroundColor: '#475569' },
+  sortBtnTxt:       { fontSize: 11, fontWeight: '600', color: '#64748B' },
+  sortBtnTxtActive: { color: '#fff' },
 
   row:              { backgroundColor: '#fff', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1, borderLeftWidth: 3, borderLeftColor: 'transparent' },
   rowChecked:       { backgroundColor: '#FFF5F5', borderLeftColor: '#FC5A5A' },
