@@ -642,15 +642,36 @@ function ExpenseModal({
   // クイック追加パネル
   const [quickItem, setQuickItem] = useState<{
     cat: Category; item: TemplateItem;
-    step: 'day' | 'amount' | 'payment';
+    step: 'day' | 'amount' | 'payment' | 'yearlyDate';
     tempAmount: string; tempDay: string; tempCustomDays: string;
+    tempNextDate: Date;
   } | null>(null);
   const quickSlideAnim = useRef(new Animated.Value(SCREEN_W)).current;
+
+  // 年間カレンダーボトムシート
+  const [calSheet, setCalSheet]     = useState(false);
+  const calSheetAnim                = useRef(new Animated.Value(600)).current;
+  const [calViewMonth, setCalViewMonth] = useState(() => {
+    const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d;
+  });
+
+  const openCalSheet = () => {
+    setCalSheet(true);
+    Animated.timing(calSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+  };
+
+  const closeCalSheet = () => {
+    Animated.timing(calSheetAnim, { toValue: 600, duration: 240, useNativeDriver: true })
+      .start(() => setCalSheet(false));
+  };
 
   const openQuickPanel = (cat: Category, item: TemplateItem) => {
     const hasYenAmount = item.amount !== undefined && item.currency !== 'USD';
     const isMonthly    = !item.cycle || item.cycle === 'monthly';
+    const isYearly     = item.cycle === 'yearly';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const step = hasYenAmount && isMonthly ? 'day'
+               : hasYenAmount && isYearly  ? 'yearlyDate'
                : hasYenAmount              ? 'payment'
                :                             'amount';
     setQuickItem({
@@ -658,27 +679,54 @@ function ExpenseModal({
       tempAmount:     hasYenAmount ? String(item.amount) : '',
       tempDay:        String(new Date().getDate()),
       tempCustomDays: '',
+      tempNextDate:   today,
     });
+    const calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    setCalViewMonth(calMonth);
     Animated.timing(quickSlideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+    if (step === 'yearlyDate') setTimeout(openCalSheet, 100);
   };
 
   const closeQuickPanel = () => {
+    if (calSheet) closeCalSheet();
     Animated.timing(quickSlideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
       .start(() => setQuickItem(null));
   };
 
   const handleQuickConfirm = () => {
     if (!quickItem) return;
-    const { cat, item, step, tempAmount, tempDay, tempCustomDays } = quickItem;
+    const { cat, item, step, tempAmount, tempDay, tempCustomDays, tempNextDate } = quickItem;
 
-    // 金額入力ステップ → 支払周期ステップへ
+    // 金額入力ステップ → 次ステップへ
     if (step === 'amount') {
       const n = parseInt(tempAmount, 10);
       if (!tempAmount || isNaN(n) || n <= 0) {
         Alert.alert('入力エラー', '正しい金額を入力してください');
         return;
       }
-      setQuickItem(q => q && ({ ...q, step: 'payment' }));
+      if (item.cycle === 'yearly') {
+        setQuickItem(q => q && ({ ...q, step: 'yearlyDate' }));
+        openCalSheet();
+      } else {
+        setQuickItem(q => q && ({ ...q, step: 'payment' }));
+      }
+      return;
+    }
+
+    // 年間支払日ステップ → 登録
+    if (step === 'yearlyDate') {
+      const amount = parseInt(tempAmount, 10);
+      const exp: Expense = {
+        id:       genId(),
+        name:     item.name,
+        amount,
+        category: cat,
+        cycle:    'yearly',
+        nextDate: tempNextDate.toISOString(),
+        memo:     '',
+      };
+      onQuickAdd(exp);
+      closeQuickPanel();
       return;
     }
 
@@ -727,6 +775,7 @@ function ExpenseModal({
   useEffect(() => {
     if (!visible) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (calSheet)  { closeCalSheet();   return true; }
       if (quickItem) { closeQuickPanel(); return true; }
       if (catPanel)  { closeCatPanel();   return true; }
       if (payPanel)  { closePayPanel();   return true; }
@@ -735,7 +784,7 @@ function ExpenseModal({
       return true;
     });
     return () => sub.remove();
-  }, [visible, quickItem, catPanel, payPanel, tmplCat, tmplSubcat, tmplGroup]);
+  }, [visible, calSheet, quickItem, catPanel, payPanel, tmplCat, tmplSubcat, tmplGroup]);
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;
@@ -922,7 +971,10 @@ function ExpenseModal({
                 <Ionicons name="chevron-back" size={22} color="#475569" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>
-                {quickItem.step === 'amount' ? '金額を入力' : quickItem.step === 'payment' ? '支払い周期' : '支払日を確認'}
+                {quickItem.step === 'amount' ? '金額を入力'
+                  : quickItem.step === 'payment' ? '支払い周期'
+                  : quickItem.step === 'yearlyDate' ? '支払日を選択'
+                  : '支払日を確認'}
               </Text>
               <View style={{ width: 44 }} />
             </View>
@@ -940,7 +992,9 @@ function ExpenseModal({
                 {quickItem.step !== 'amount' && (
                   <Text style={s.qaServiceAmt}>
                     {yen(parseInt(quickItem.tempAmount, 10) || 0)}
-                    {' / '}{quickItem.tempCustomDays ? `${quickItem.tempCustomDays}日ごと` : '毎月'}
+                    {' / '}
+                    {quickItem.step === 'yearlyDate' ? '年間'
+                      : quickItem.tempCustomDays ? `${quickItem.tempCustomDays}日ごと` : '毎月'}
                   </Text>
                 )}
               </View>
@@ -1007,6 +1061,30 @@ function ExpenseModal({
               </View>
             )}
 
+            {/* ── step: yearlyDate（年間払い） ── */}
+            {quickItem.step === 'yearlyDate' && (
+              <View style={s.qaPanelBody}>
+                <Text style={s.qaDayPrompt}>年間の支払日</Text>
+                <Text style={[s.inputHint, { alignSelf: 'flex-start', marginBottom: 16 }]}>
+                  毎年この日に引き落とされます
+                </Text>
+                <TouchableOpacity
+                  style={s.qaDatePickerRow}
+                  onPress={openCalSheet}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="calendar-outline" size={20} color="#475569" />
+                  <Text style={s.qaDatePickerText}>
+                    {format(quickItem.tempNextDate, 'M月d日(E)', { locale: ja })}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={handleQuickConfirm} activeOpacity={0.85}>
+                  <Text style={s.qaBtnText}>登録する</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* ── step: day（毎月払いサブスク） ── */}
             {quickItem.step === 'day' && (
               <View style={s.qaPanelBody}>
@@ -1033,6 +1111,113 @@ function ExpenseModal({
             )}
           </Animated.View>
         )}
+
+        {/* 年間支払日カレンダーシート */}
+        {calSheet && (() => {
+          const y = calViewMonth.getFullYear();
+          const mo = calViewMonth.getMonth();
+          const firstDow = new Date(y, mo, 1).getDay();
+          const daysInMonth = new Date(y, mo + 1, 0).getDate();
+          const selD = quickItem?.tempNextDate;
+          const isSel = (d: number) =>
+            selD && selD.getFullYear() === y && selD.getMonth() === mo && selD.getDate() === d;
+          const cells: (number | null)[] = [
+            ...Array(firstDow).fill(null),
+            ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+          ];
+          while (cells.length % 7 !== 0) cells.push(null);
+          const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+          return (
+            <>
+              <TouchableOpacity
+                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
+                onPress={closeCalSheet}
+                activeOpacity={1}
+              />
+              <Animated.View style={[s.calSheet, { transform: [{ translateY: calSheetAnim }] }]}>
+                {/* ドラッグハンドル */}
+                <View style={s.calHandle} />
+
+                {/* 月ナビ */}
+                <View style={s.calNavRow}>
+                  <TouchableOpacity
+                    style={s.calNavBtn}
+                    onPress={() => setCalViewMonth(new Date(y, mo - 1, 1))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chevron-back" size={22} color="#475569" />
+                  </TouchableOpacity>
+                  <Text style={s.calNavTitle}>{y}年 {mo + 1}月</Text>
+                  <TouchableOpacity
+                    style={s.calNavBtn}
+                    onPress={() => setCalViewMonth(new Date(y, mo + 1, 1))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chevron-forward" size={22} color="#475569" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* 曜日ヘッダ */}
+                <View style={s.calDowRow}>
+                  {DOW_LABELS.map((l, i) => (
+                    <Text
+                      key={l}
+                      style={[s.calDowLabel, i === 0 && s.calDowSun, i === 6 && s.calDowSat]}
+                    >
+                      {l}
+                    </Text>
+                  ))}
+                </View>
+
+                {/* 日グリッド */}
+                <View style={s.calGrid}>
+                  {cells.map((d, idx) => {
+                    const col = idx % 7;
+                    const sel = d !== null && isSel(d);
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[s.calCell, sel && s.calCellSel]}
+                        onPress={() => {
+                          if (!d || !quickItem) return;
+                          const today = new Date(); today.setHours(0, 0, 0, 0);
+                          let ny = y, nm = mo;
+                          const candidate = new Date(y, mo, d);
+                          if (candidate < today) { ny = y + 1; }
+                          setQuickItem(q => q && ({ ...q, tempNextDate: new Date(ny, nm, d) }));
+                        }}
+                        activeOpacity={d ? 0.7 : 1}
+                        disabled={!d}
+                      >
+                        {d !== null && (
+                          <Text style={[
+                            s.calCellText,
+                            col === 0 && s.calCellSun,
+                            col === 6 && s.calCellSat,
+                            sel    && s.calCellTextSel,
+                          ]}>
+                            {d}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* 確定ボタン */}
+                <TouchableOpacity
+                  style={[s.qaBtn, s.calConfirmBtn]}
+                  onPress={closeCalSheet}
+                  activeOpacity={0.85}
+                >
+                  <Text style={s.qaBtnText}>
+                    {selD ? format(selD, 'M月d日(E)', { locale: ja }) + ' に確定' : '日付を選択してください'}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </>
+          );
+        })()}
 
         {/* 支払スライドパネル */}
         {payPanel && (
@@ -1471,6 +1656,27 @@ const s = StyleSheet.create({
   qaAmountInput:    { flex: 1, fontSize: 36, fontWeight: '800', color: '#475569', paddingVertical: 12, paddingLeft: 6 },
   qaBtn:            { backgroundColor: '#475569', borderRadius: 14, paddingVertical: 16, marginTop: 4, alignItems: 'center', width: '100%' },
   qaBtnText:        { fontSize: 17, fontWeight: '700', color: '#fff' },
+  qaDatePickerRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F3F4F6', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18, borderWidth: 2, borderColor: '#D1D5DB', width: '100%' },
+  qaDatePickerText: { flex: 1, fontSize: 20, fontWeight: '700', color: '#1A202C' },
+
+  // 年間カレンダーシート
+  calSheet:         { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 16 },
+  calHandle:        { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 12, marginBottom: 4 },
+  calNavRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  calNavBtn:        { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  calNavTitle:      { fontSize: 17, fontWeight: '800', color: '#1A202C' },
+  calDowRow:        { flexDirection: 'row', marginBottom: 4 },
+  calDowLabel:      { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: '#A0AEC0', paddingVertical: 4 },
+  calDowSun:        { color: '#EF4444' },
+  calDowSat:        { color: '#3B82F6' },
+  calGrid:          { flexDirection: 'row', flexWrap: 'wrap' },
+  calCell:          { width: Math.floor((SCREEN_W - 32) / 7), aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 100 },
+  calCellSel:       { backgroundColor: '#475569' },
+  calCellText:      { fontSize: 15, fontWeight: '600', color: '#1A202C' },
+  calCellSun:       { color: '#EF4444' },
+  calCellSat:       { color: '#3B82F6' },
+  calCellTextSel:   { color: '#fff' },
+  calConfirmBtn:    { marginTop: 16 },
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
