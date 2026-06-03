@@ -1257,10 +1257,8 @@ export default function HomeScreen() {
       >
         <View style={s.summaryNew}>
           <Text style={s.summaryMonthLabel}>月額見込み</Text>
-          <View style={s.summaryMainRow}>
-            <Text style={s.summaryMonthVal}>{yen(dispMonthly)}</Text>
-            <Text style={s.summaryAnnualTxt}>年間 {yen(dispAnnual)}</Text>
-          </View>
+          <Text style={s.summaryMonthVal}>{yen(dispMonthly)}</Text>
+          <Text style={s.summaryAnnualTxt}>年間 {yen(dispAnnual)}</Text>
           <Text style={s.summaryCountTxt}>{expenses.length}件登録</Text>
         </View>
       </LinearGradient>
@@ -1332,7 +1330,7 @@ const s = StyleSheet.create({
   summaryMonthLabel: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600', letterSpacing: 0.5, marginBottom: 4 },
   summaryMainRow:    { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   summaryMonthVal:   { fontSize: 46, fontWeight: '800', color: '#fff', letterSpacing: -1 },
-  summaryAnnualTxt:  { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600', paddingBottom: 6 },
+  summaryAnnualTxt:  { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 2 },
   summaryCountTxt:   { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginTop: 4 },
   nextBox:           { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   nextLabel:         { fontSize: 11, fontWeight: '700', color: '#A0AEC0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
