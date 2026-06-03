@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useSettings, type NotifyTarget, type DaysBefore } from '../context/SettingsContext';
+import { useSettings, type NotifyTarget } from '../context/SettingsContext';
 import { useExpenses } from '../context/ExpensesContext';
 import {
   requestNotificationPermission,
@@ -15,6 +15,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { notifSettings, setNotifSettings } = useSettings();
   const { expenses } = useExpenses();
+  const [daysInput, setDaysInput] = useState(String(notifSettings.daysBefore));
 
   useEffect(() => {
     scheduleExpenseNotifications(expenses, notifSettings);
@@ -37,12 +38,14 @@ export default function SettingsScreen() {
     { value: 'fixed',        label: '固定費のみ',       sub: 'サブスク以外を通知' },
   ];
 
-  const DAYS_OPTIONS: { value: DaysBefore; label: string }[] = [
-    { value: 0, label: '当日' },
-    { value: 1, label: '1日前' },
-    { value: 3, label: '3日前' },
-    { value: 7, label: '7日前' },
-  ];
+  const commitDays = () => {
+    const n = parseInt(daysInput, 10);
+    if (!isNaN(n) && n >= 0) {
+      setNotifSettings({ ...notifSettings, daysBefore: n });
+    } else {
+      setDaysInput(String(notifSettings.daysBefore));
+    }
+  };
 
   return (
     <View style={c.root}>
@@ -99,19 +102,18 @@ export default function SettingsScreen() {
           {/* 何日前 */}
           <View style={[c.subSection, !notifSettings.enabled && c.disabled]}>
             <Text style={c.subTitle}>通知タイミング</Text>
-            <View style={c.daysRow}>
-              {DAYS_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[c.dayBtn, notifSettings.daysBefore === opt.value && c.dayBtnActive]}
-                  onPress={() => notifSettings.enabled && setNotifSettings({ ...notifSettings, daysBefore: opt.value })}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[c.dayBtnTxt, notifSettings.daysBefore === opt.value && c.dayBtnTxtActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={c.daysInputRow}>
+              <TextInput
+                style={c.daysInput}
+                value={daysInput}
+                onChangeText={setDaysInput}
+                onBlur={commitDays}
+                keyboardType="number-pad"
+                maxLength={2}
+                editable={notifSettings.enabled}
+                selectTextOnFocus
+              />
+              <Text style={c.daysInputLabel}>日前に通知（0 = 当日）</Text>
             </View>
           </View>
         </View>
@@ -144,10 +146,8 @@ const c = StyleSheet.create({
   radio:          { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#CBD5E0', justifyContent: 'center', alignItems: 'center' },
   radioActive:    { borderColor: '#475569' },
   radioDot:       { width: 10, height: 10, borderRadius: 5, backgroundColor: '#475569' },
-  daysRow:        { flexDirection: 'row', gap: 8 },
-  dayBtn:         { flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center' },
-  dayBtnActive:   { backgroundColor: '#475569' },
-  dayBtnTxt:      { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  dayBtnTxtActive:{ color: '#fff' },
+  daysInputRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  daysInput:      { width: 64, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#1A202C' },
+  daysInputLabel: { fontSize: 14, color: '#64748B', fontWeight: '500' },
   version:        { textAlign: 'center', fontSize: 12, color: '#CBD5E0', marginTop: 8 },
 });

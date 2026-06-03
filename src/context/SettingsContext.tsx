@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type NotifyTarget = 'all' | 'subscription' | 'fixed';
-export type DaysBefore = 0 | 1 | 3 | 7;
+export type DaysBefore = number;
 
 export interface NotificationSettings {
   enabled: boolean;
