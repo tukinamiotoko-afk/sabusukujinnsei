@@ -11,7 +11,8 @@ const KEYWORD_MAP: [string, string][] = [
   ['Niconico',       'siNiconico'],
   ['niconico',       'siNiconico'],
   ['Mubi',           'siMubi'],
-  ['DAZN',           'siDazn'],
+  // DAZNはブランドカラーがほぼ白(#F8F8F5)のためTEXT_ICON_MAPで処理
+  // ['DAZN',        'siDazn'],
   ['Twitch',         'siTwitch'],
   ['Vimeo',          'siVimeo'],
   ['HBO',            'siHbomax'],
@@ -124,6 +125,7 @@ const TEXT_ICON_MAP: [string, TextIconDef][] = [
   ['auスマート',          { text: 'au',  bg: '#E87722', fg: '#fff' }],
   ['milplus',            { text: 'mil',  bg: '#5A67D8', fg: '#fff' }],
   ['LEAN BODY',          { text: 'LB',   bg: '#FF4500', fg: '#fff' }],
+  ['DAZN',               { text: 'DAZN', bg: '#000000', fg: '#F8F8F5' }],
   ['Discovery',          { text: 'D+',   bg: '#0064FF', fg: '#fff' }],
   ['LEAN',               { text: 'LB',   bg: '#FF4500', fg: '#fff' }],
   // 音楽
