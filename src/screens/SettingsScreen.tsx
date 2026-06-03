@@ -113,7 +113,20 @@ export default function SettingsScreen() {
                 editable={notifSettings.enabled}
                 selectTextOnFocus
               />
-              <Text style={c.daysInputLabel}>日前に通知（0 = 当日）</Text>
+              <Text style={c.daysInputLabel}>日前に通知</Text>
+            </View>
+            <View style={c.daysPresets}>
+              {[0, 1, 3, 7, 14].map(n => (
+                <TouchableOpacity
+                  key={n}
+                  style={[c.presetBtn, notifSettings.daysBefore === n && c.presetBtnActive]}
+                  onPress={() => { if (notifSettings.enabled) { setDaysInput(String(n)); setNotifSettings({ ...notifSettings, daysBefore: n }); } }}
+                >
+                  <Text style={[c.presetTxt, notifSettings.daysBefore === n && c.presetTxtActive]}>
+                    {n === 0 ? '当日' : `${n}日前`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -146,8 +159,13 @@ const c = StyleSheet.create({
   radio:          { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#CBD5E0', justifyContent: 'center', alignItems: 'center' },
   radioActive:    { borderColor: '#475569' },
   radioDot:       { width: 10, height: 10, borderRadius: 5, backgroundColor: '#475569' },
-  daysInputRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  daysInput:      { width: 64, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#1A202C' },
-  daysInputLabel: { fontSize: 14, color: '#64748B', fontWeight: '500' },
+  daysInputRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  daysInput:       { width: 64, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#1A202C' },
+  daysInputLabel:  { fontSize: 14, color: '#64748B', fontWeight: '500' },
+  daysPresets:     { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  presetBtn:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: '#F1F5F9' },
+  presetBtnActive: { backgroundColor: '#475569' },
+  presetTxt:       { fontSize: 11, fontWeight: '600', color: '#64748B' },
+  presetTxtActive: { color: '#fff' },
   version:        { textAlign: 'center', fontSize: 12, color: '#CBD5E0', marginTop: 8 },
 });
