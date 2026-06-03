@@ -39,7 +39,7 @@ export async function scheduleExpenseNotifications(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Schedule for next 60 days
+  // Schedule for next 60 days × each daysBefore value
   for (let offset = 0; offset < 60; offset++) {
     const checkDate = new Date(today);
     checkDate.setDate(today.getDate() + offset);
@@ -47,22 +47,25 @@ export async function scheduleExpenseNotifications(
     const hits = filtered.filter(e => isPaymentOnDate(e, checkDate));
     if (hits.length === 0) continue;
 
-    const notifyDate = new Date(checkDate);
-    notifyDate.setDate(checkDate.getDate() - settings.daysBefore);
-    notifyDate.setHours(9, 0, 0, 0);
-
-    if (notifyDate <= new Date()) continue;
-
     const names = hits.map(e => e.name).join('、');
     const total = hits.reduce((s, e) => s + e.amount, 0);
-    const label = settings.daysBefore === 0 ? '本日' : `${settings.daysBefore}日後`;
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `💳 ${label}の支払い`,
-        body: `${names}  合計 ¥${Math.round(total).toLocaleString('ja-JP')}`,
-      },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: notifyDate },
-    });
+    for (const d of settings.daysBefore) {
+      const notifyDate = new Date(checkDate);
+      notifyDate.setDate(checkDate.getDate() - d);
+      notifyDate.setHours(9, 0, 0, 0);
+
+      if (notifyDate <= new Date()) continue;
+
+      const label = d === 0 ? '本日' : `${d}日前`;
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `💳 ${label}の支払い`,
+          body: `${names}  合計 ¥${Math.round(total).toLocaleString('ja-JP')}`,
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: notifyDate },
+      });
+    }
   }
 }

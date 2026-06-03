@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { notifSettings, setNotifSettings } = useSettings();
   const { expenses } = useExpenses();
-  const [daysInput, setDaysInput] = useState(String(notifSettings.daysBefore));
+  const [daysInput, setDaysInput] = useState('');
 
   useEffect(() => {
     scheduleExpenseNotifications(expenses, notifSettings);
@@ -38,13 +38,25 @@ export default function SettingsScreen() {
     { value: 'fixed',        label: '固定費のみ',       sub: 'サブスク以外を通知' },
   ];
 
-  const commitDays = () => {
+  const addDay = () => {
     const n = parseInt(daysInput, 10);
-    if (!isNaN(n) && n >= 0) {
-      setNotifSettings({ ...notifSettings, daysBefore: n });
-    } else {
-      setDaysInput(String(notifSettings.daysBefore));
+    if (!isNaN(n) && n >= 0 && !notifSettings.daysBefore.includes(n)) {
+      setNotifSettings({ ...notifSettings, daysBefore: [...notifSettings.daysBefore, n].sort((a, b) => a - b) });
     }
+    setDaysInput('');
+  };
+
+  const togglePreset = (n: number) => {
+    if (!notifSettings.enabled) return;
+    const current = notifSettings.daysBefore;
+    const next = current.includes(n) ? current.filter(d => d !== n) : [...current, n].sort((a, b) => a - b);
+    if (next.length === 0) return;
+    setNotifSettings({ ...notifSettings, daysBefore: next });
+  };
+
+  const removeDay = (n: number) => {
+    if (notifSettings.daysBefore.length <= 1) return;
+    setNotifSettings({ ...notifSettings, daysBefore: notifSettings.daysBefore.filter(d => d !== n) });
   };
 
   return (
@@ -101,31 +113,47 @@ export default function SettingsScreen() {
 
           {/* 何日前 */}
           <View style={[c.subSection, !notifSettings.enabled && c.disabled]}>
-            <Text style={c.subTitle}>通知タイミング</Text>
+            <Text style={c.subTitle}>通知タイミング（複数可）</Text>
+            {/* プリセット */}
+            <View style={c.daysPresets}>
+              {[0, 1, 3].map(n => (
+                <TouchableOpacity
+                  key={n}
+                  style={[c.presetBtn, notifSettings.daysBefore.includes(n) && c.presetBtnActive]}
+                  onPress={() => togglePreset(n)}
+                >
+                  <Text style={[c.presetTxt, notifSettings.daysBefore.includes(n) && c.presetTxtActive]}>
+                    {n === 0 ? '当日' : `${n}日前`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* カスタム入力 */}
             <View style={c.daysInputRow}>
               <TextInput
                 style={c.daysInput}
                 value={daysInput}
                 onChangeText={setDaysInput}
-                onBlur={commitDays}
+                placeholder="日数"
+                placeholderTextColor="#CBD5E0"
                 keyboardType="number-pad"
                 maxLength={2}
                 editable={notifSettings.enabled}
-                selectTextOnFocus
               />
-              <Text style={c.daysInputLabel}>日前に通知</Text>
+              <Text style={c.daysInputLabel}>日前</Text>
+              <TouchableOpacity style={c.addBtn} onPress={addDay}>
+                <Ionicons name="add" size={18} color="#fff" />
+              </TouchableOpacity>
             </View>
-            <View style={c.daysPresets}>
-              {[0, 1, 3].map(n => (
-                <TouchableOpacity
-                  key={n}
-                  style={[c.presetBtn, notifSettings.daysBefore === n && c.presetBtnActive]}
-                  onPress={() => { if (notifSettings.enabled) { setDaysInput(String(n)); setNotifSettings({ ...notifSettings, daysBefore: n }); } }}
-                >
-                  <Text style={[c.presetTxt, notifSettings.daysBefore === n && c.presetTxtActive]}>
-                    {n === 0 ? '当日' : `${n}日前`}
-                  </Text>
-                </TouchableOpacity>
+            {/* 選択済みタグ */}
+            <View style={c.selectedDays}>
+              {notifSettings.daysBefore.map(n => (
+                <View key={n} style={c.dayTag}>
+                  <Text style={c.dayTagTxt}>{n === 0 ? '当日' : `${n}日前`}</Text>
+                  <TouchableOpacity onPress={() => removeDay(n)} hitSlop={6}>
+                    <Ionicons name="close" size={12} color="#475569" />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           </View>
@@ -159,13 +187,17 @@ const c = StyleSheet.create({
   radio:          { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#CBD5E0', justifyContent: 'center', alignItems: 'center' },
   radioActive:    { borderColor: '#475569' },
   radioDot:       { width: 10, height: 10, borderRadius: 5, backgroundColor: '#475569' },
-  daysInputRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  daysInput:       { width: 64, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#1A202C' },
-  daysInputLabel:  { fontSize: 14, color: '#64748B', fontWeight: '500' },
-  daysPresets:     { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  presetBtn:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: '#F1F5F9' },
+  daysPresets:     { flexDirection: 'row', gap: 6, marginBottom: 10 },
+  presetBtn:       { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F1F5F9' },
   presetBtnActive: { backgroundColor: '#475569' },
-  presetTxt:       { fontSize: 11, fontWeight: '600', color: '#64748B' },
+  presetTxt:       { fontSize: 12, fontWeight: '600', color: '#64748B' },
   presetTxtActive: { color: '#fff' },
+  daysInputRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  daysInput:       { width: 64, height: 36, borderRadius: 10, backgroundColor: '#F1F5F9', textAlign: 'center', fontSize: 16, fontWeight: '700', color: '#1A202C' },
+  daysInputLabel:  { fontSize: 14, color: '#64748B', fontWeight: '500' },
+  addBtn:          { width: 36, height: 36, borderRadius: 10, backgroundColor: '#475569', justifyContent: 'center', alignItems: 'center' },
+  selectedDays:    { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  dayTag:          { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' },
+  dayTagTxt:       { fontSize: 12, fontWeight: '600', color: '#475569' },
   version:        { textAlign: 'center', fontSize: 12, color: '#CBD5E0', marginTop: 8 },
 });

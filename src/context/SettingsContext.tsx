@@ -2,18 +2,16 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type NotifyTarget = 'all' | 'subscription' | 'fixed';
-export type DaysBefore = number;
-
 export interface NotificationSettings {
   enabled: boolean;
   target: NotifyTarget;
-  daysBefore: DaysBefore;
+  daysBefore: number[];
 }
 
 const DEFAULT: NotificationSettings = {
   enabled: false,
   target: 'all',
-  daysBefore: 1,
+  daysBefore: [1],
 };
 
 const KEY = '@notification_settings';
