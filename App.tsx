@@ -13,6 +13,7 @@ enableScreens();
 import HomeScreen from './src/screens/HomeScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SimulatorScreen from './src/screens/SimulatorScreen';
+import ChartScreen from './src/screens/ChartScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -44,6 +45,8 @@ function TabNavigator() {
             iconName = focused ? 'calendar' : 'calendar-outline';
           } else if (route.name === '一括削除') {
             iconName = focused ? 'trash' : 'trash-outline';
+          } else if (route.name === 'グラフ') {
+            iconName = focused ? 'bar-chart' : 'bar-chart-outline';
           } else {
             iconName = focused ? 'settings' : 'settings-outline';
           }
@@ -53,6 +56,7 @@ function TabNavigator() {
     >
       <Tab.Screen name="一覧" component={HomeScreen} />
       <Tab.Screen name="カレンダー" component={CalendarScreen} />
+      <Tab.Screen name="グラフ" component={ChartScreen} />
       <Tab.Screen name="一括削除" component={SimulatorScreen} />
       <Tab.Screen name="設定" component={SettingsScreen} />
     </Tab.Navigator>
