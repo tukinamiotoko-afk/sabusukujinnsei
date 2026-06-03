@@ -30,6 +30,19 @@ const R_IN  = R_OUT * 0.60;
 const CX    = CHART_SIZE / 2;
 const CY    = CHART_SIZE / 2;
 
+// 外周アイコン配置
+const ICON_SZ  = 28;
+const LABEL_R  = R_OUT + 10 + ICON_SZ / 2;
+const DOC_PAD  = ICON_SZ + 14;
+const WRAP_SZ  = CHART_SIZE + DOC_PAD * 2;
+const WCX      = WRAP_SZ / 2;
+const WCY      = WRAP_SZ / 2;
+
+function iconPos(midDeg: number) {
+  const rad = ((midDeg - 90) * Math.PI) / 180;
+  return { left: WCX + LABEL_R * Math.cos(rad) - ICON_SZ / 2, top: WCY + LABEL_R * Math.sin(rad) - ICON_SZ / 2 };
+}
+
 function polarXY(r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180;
   return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
@@ -135,7 +148,7 @@ export default function ChartScreen() {
         ) : (
           <View style={c.chartCard}>
             {/* ドーナツ */}
-            <View style={c.donutWrap}>
+            <View style={[c.donutWrap, { width: WRAP_SZ, height: WRAP_SZ }]}>
               <Svg width={CHART_SIZE} height={CHART_SIZE}>
                 {segments.length === 1 ? (
                   <>
@@ -148,11 +161,28 @@ export default function ChartScreen() {
                   ))
                 )}
               </Svg>
-              <View style={c.donutCenter}>
+              {/* ドーナツ中央テキスト */}
+              <View style={[c.donutCenter, { left: DOC_PAD, top: DOC_PAD, width: CHART_SIZE, height: CHART_SIZE }]}>
                 <Text style={c.donutCenterLabel}>月額合計</Text>
                 <Text style={c.donutCenterAmt}>{yen(totalMonthly)}</Text>
                 <Text style={c.donutCenterCount}>{filtered.length}件</Text>
               </View>
+              {/* 外周アイコン */}
+              {segments.filter(seg => seg.end - seg.start >= 18).map(seg => {
+                const mid = (seg.start + seg.end) / 2;
+                const pos = iconPos(mid);
+                const { color: catColor, icon: catIcon } = CAT[seg.category];
+                return (
+                  <View key={`oi-${seg.id}`} style={{ position: 'absolute', left: pos.left, top: pos.top }}>
+                    {hasServiceIcon(seg.name)
+                      ? <ServiceIconMini name={seg.name} size={ICON_SZ} />
+                      : <View style={{ width: ICON_SZ, height: ICON_SZ, borderRadius: ICON_SZ * 0.28, backgroundColor: seg.color, justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name={catIcon as never} size={12} color="#fff" />
+                        </View>
+                    }
+                  </View>
+                );
+              })}
             </View>
 
             {/* サービス一覧（凡例） */}
@@ -213,8 +243,8 @@ const c = StyleSheet.create({
 
   chartCard:        { marginHorizontal: 16, marginBottom: 16, backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
 
-  donutWrap:        { alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  donutCenter:      { position: 'absolute', alignItems: 'center' },
+  donutWrap:        { alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  donutCenter:      { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   donutCenterLabel: { fontSize: 10, color: '#94A3B8', fontWeight: '600' },
   donutCenterAmt:   { fontSize: 17, fontWeight: '800', color: '#1A202C', letterSpacing: -0.5 },
   donutCenterCount: { fontSize: 10, color: '#A0AEC0', marginTop: 1 },

@@ -393,12 +393,12 @@ const s = StyleSheet.create({
   summaryAmountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
   summaryLabel:     { fontSize: 13, color: '#718096', fontWeight: '600' },
   summaryAmount:         { fontSize: 28, fontWeight: '800', color: '#1A202C' },
-  summaryAmountReducing: { color: '#FC5A5A' },
+  summaryAmountReducing: { color: '#6366F1' },
   summarySub:       { fontSize: 13, color: '#A0AEC0' },
   reductionRow:     { gap: 6, marginTop: 10 },
   reductionDivider: { height: 1, backgroundColor: '#EDF2F7', marginBottom: 4 },
-  reductionLabel:   { fontSize: 13, color: '#FC5A5A', fontWeight: '600' },
-  reductionAmount:  { fontSize: 22, fontWeight: '800', color: '#FC5A5A' },
+  reductionLabel:   { fontSize: 13, color: '#10B981', fontWeight: '600' },
+  reductionAmount:  { fontSize: 22, fontWeight: '800', color: '#10B981' },
 
   // ボトムバー
   bottomBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EDF2F7', paddingHorizontal: 16, paddingTop: 12, flexDirection: 'row', gap: 10 },

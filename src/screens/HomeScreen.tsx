@@ -260,11 +260,13 @@ function BillingButtons({ item, cat, onDirectAdd }: {
 
 function TemplateBrowser({
   onDirectAdd,
+  onBillingOpen,
   activeCategory, setActiveCategory,
   activeSubcat, setActiveSubcat,
   activeGroup, setActiveGroup,
 }: {
   onDirectAdd: (cat: Category, item: TemplateItem) => void;
+  onBillingOpen: (cat: Category, item: TemplateItem) => void;
   activeCategory: Category | null; setActiveCategory: (c: Category | null) => void;
   activeSubcat: string | null;     setActiveSubcat:   (s: string | null) => void;
   activeGroup: string | null;      setActiveGroup:    (g: string | null) => void;
@@ -317,7 +319,7 @@ function TemplateBrowser({
             const { color, icon } = CAT[cat];
             return (
               <TouchableOpacity key={i} style={s.tmplItem}
-                onPress={() => onDirectAdd(cat, item)} activeOpacity={0.7}>
+                onPress={() => handleCardTap(cat, item)} activeOpacity={0.7}>
                 <TmplIcon name={item.name} color={color} icon={icon} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.tmplItemName}>{item.name}</Text>
@@ -337,22 +339,16 @@ function TemplateBrowser({
     );
   }
 
-  const renderGridBilling = (item: TemplateItem, cat: Category) => {
+  const renderGridBilling = (item: TemplateItem) => {
     if (item.yearlyAmount !== undefined) {
       return (
         <View style={s.tmplGridBilling}>
-          <TouchableOpacity style={s.tmplGridBillingBtn}
-            onPress={() => onDirectAdd(cat, item)}>
-            <Text style={s.tmplGridBillingTxt}>
-              月{item.amount !== undefined ? (item.currency === 'USD' ? ` $${item.amount}` : ` ${yen(item.amount)}`) : ''}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.tmplGridBillingBtn, s.tmplGridBillingBtnYear]}
-            onPress={() => onDirectAdd(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}>
-            <Text style={s.tmplGridBillingTxt}>
-              年{item.currency === 'USD' ? ` $${item.yearlyAmount}` : ` ${yen(item.yearlyAmount!)}`}
-            </Text>
-          </TouchableOpacity>
+          <Text style={s.tmplGridBillingTxt}>
+            月{item.amount !== undefined ? (item.currency === 'USD' ? ` $${item.amount}` : ` ${yen(item.amount)}`) : ''}
+          </Text>
+          <Text style={[s.tmplGridBillingTxt, s.tmplGridBillingTxtYear]}>
+            年{item.currency === 'USD' ? ` $${item.yearlyAmount}` : ` ${yen(item.yearlyAmount)}`}
+          </Text>
         </View>
       );
     }
@@ -364,6 +360,11 @@ function TemplateBrowser({
       );
     }
     return null;
+  };
+
+  const handleCardTap = (cat: Category, item: TemplateItem) => {
+    if (item.yearlyAmount !== undefined) { onBillingOpen(cat, item); }
+    else { onDirectAdd(cat, item); }
   };
 
   // Level 3: プラン一覧
@@ -378,12 +379,12 @@ function TemplateBrowser({
             const label = item.planName ?? item.name;
             return (
               <TouchableOpacity key={i} style={s.tmplGridCard}
-                onPress={() => onDirectAdd(activeCategory, item)} activeOpacity={0.75}>
+                onPress={() => handleCardTap(activeCategory, item)} activeOpacity={0.75}>
                 <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
                   <Ionicons name={icon as never} size={22} color={color} />
                 </View>
                 <Text style={s.tmplGridName} numberOfLines={2}>{label}</Text>
-                {renderGridBilling(item, activeCategory)}
+                {renderGridBilling(item)}
               </TouchableOpacity>
             );
           })}
@@ -421,14 +422,14 @@ function TemplateBrowser({
             const item = entry.item;
             return (
               <TouchableOpacity key={i} style={s.tmplGridCard}
-                onPress={() => onDirectAdd(activeCategory, item)} activeOpacity={0.7}>
+                onPress={() => handleCardTap(activeCategory, item)} activeOpacity={0.7}>
                 {hasServiceIcon(item.name)
                   ? <ServiceIcon name={item.name} size={40} />
                   : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
                       <Ionicons name={icon as never} size={22} color={color} />
                     </View>}
                 <Text style={s.tmplGridName} numberOfLines={2}>{item.name}</Text>
-                {renderGridBilling(item, activeCategory)}
+                {renderGridBilling(item)}
               </TouchableOpacity>
             );
           })}
@@ -639,6 +640,24 @@ function ExpenseModal({
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
 
+  // プラン選択ボトムシート
+  const [billingItem, setBillingItem] = useState<{ cat: Category; item: TemplateItem } | null>(null);
+  const billingAnim = useRef(new Animated.Value(500)).current;
+
+  const openBillingSheet = (cat: Category, item: TemplateItem) => {
+    setBillingItem({ cat, item });
+    Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+  };
+
+  const closeBillingSheet = (then?: () => void) => {
+    Animated.timing(billingAnim, { toValue: 500, duration: 220, useNativeDriver: true })
+      .start(() => { setBillingItem(null); then?.(); });
+  };
+
+  const handleBillingSelect = (cat: Category, item: TemplateItem) => {
+    closeBillingSheet(() => openQuickPanel(cat, item));
+  };
+
   // クイック追加パネル
   const [quickItem, setQuickItem] = useState<{
     cat: Category; item: TemplateItem;
@@ -775,16 +794,17 @@ function ExpenseModal({
   useEffect(() => {
     if (!visible) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (calSheet)  { closeCalSheet();   return true; }
-      if (quickItem) { closeQuickPanel(); return true; }
-      if (catPanel)  { closeCatPanel();   return true; }
-      if (payPanel)  { closePayPanel();   return true; }
+      if (calSheet)    { closeCalSheet();      return true; }
+      if (billingItem) { closeBillingSheet();  return true; }
+      if (quickItem)   { closeQuickPanel();    return true; }
+      if (catPanel)    { closeCatPanel();      return true; }
+      if (payPanel)    { closePayPanel();      return true; }
       if (tmplCat !== null) { handleTmplBack(); return true; }
       onClose();
       return true;
     });
     return () => sub.remove();
-  }, [visible, calSheet, quickItem, catPanel, payPanel, tmplCat, tmplSubcat, tmplGroup]);
+  }, [visible, calSheet, billingItem, quickItem, catPanel, payPanel, tmplCat, tmplSubcat, tmplGroup]);
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;
@@ -900,6 +920,7 @@ function ExpenseModal({
             {activeTab === 'template' ? (
               <TemplateBrowser
                 onDirectAdd={openQuickPanel}
+                onBillingOpen={openBillingSheet}
                 activeCategory={tmplCat}    setActiveCategory={setTmplCat}
                 activeSubcat={tmplSubcat}   setActiveSubcat={setTmplSubcat}
                 activeGroup={tmplGroup}     setActiveGroup={setTmplGroup}
@@ -1181,10 +1202,11 @@ function ExpenseModal({
                         onPress={() => {
                           if (!d || !quickItem) return;
                           const today = new Date(); today.setHours(0, 0, 0, 0);
-                          let ny = y, nm = mo;
+                          let ny = y;
                           const candidate = new Date(y, mo, d);
                           if (candidate < today) { ny = y + 1; }
-                          setQuickItem(q => q && ({ ...q, tempNextDate: new Date(ny, nm, d) }));
+                          setQuickItem(q => q && ({ ...q, tempNextDate: new Date(ny, mo, d) }));
+                          closeCalSheet();
                         }}
                         activeOpacity={d ? 0.7 : 1}
                         disabled={!d}
@@ -1204,16 +1226,67 @@ function ExpenseModal({
                   })}
                 </View>
 
-                {/* 確定ボタン */}
-                <TouchableOpacity
-                  style={[s.qaBtn, s.calConfirmBtn]}
-                  onPress={closeCalSheet}
-                  activeOpacity={0.85}
-                >
-                  <Text style={s.qaBtnText}>
-                    {selD ? format(selD, 'M月d日(E)', { locale: ja }) + ' に確定' : '日付を選択してください'}
-                  </Text>
-                </TouchableOpacity>
+                <Text style={s.calTapHint}>日付をタップして確定</Text>
+              </Animated.View>
+            </>
+          );
+        })()}
+
+        {/* プラン選択ボトムシート */}
+        {billingItem && (() => {
+          const { cat, item } = billingItem;
+          const { color: catColor, icon: catIcon } = CAT[cat];
+          return (
+            <>
+              <TouchableOpacity
+                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
+                onPress={() => closeBillingSheet()}
+                activeOpacity={1}
+              />
+              <Animated.View style={[s.billingSheet, { transform: [{ translateY: billingAnim }] }]}>
+                <View style={s.billingSheetHandle} />
+                {/* サービスヘッダ */}
+                <View style={s.billingSheetHead}>
+                  {hasServiceIcon(item.name)
+                    ? <ServiceIcon name={item.name} size={44} />
+                    : <View style={[s.billingSheetIcon, { backgroundColor: catColor + '20' }]}>
+                        <Ionicons name={catIcon as never} size={20} color={catColor} />
+                      </View>
+                  }
+                  <Text style={s.billingSheetName}>{item.name}</Text>
+                </View>
+                {/* 月払いプラン */}
+                {item.amount !== undefined && (
+                  <TouchableOpacity
+                    style={s.billingPlanRow}
+                    onPress={() => handleBillingSelect(cat, item)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={s.billingPlanLeft}>
+                      <Text style={s.billingPlanLabel}>月払い</Text>
+                      <Text style={s.billingPlanAmt}>
+                        {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}<Text style={s.billingPlanPer}>/月</Text>
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#CBD5E0" />
+                  </TouchableOpacity>
+                )}
+                {/* 年払いプラン */}
+                {item.yearlyAmount !== undefined && (
+                  <TouchableOpacity
+                    style={[s.billingPlanRow, s.billingPlanRowYear]}
+                    onPress={() => handleBillingSelect(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}
+                    activeOpacity={0.75}
+                  >
+                    <View style={s.billingPlanLeft}>
+                      <Text style={[s.billingPlanLabel, s.billingPlanLabelYear]}>年払い</Text>
+                      <Text style={[s.billingPlanAmt, s.billingPlanAmtYear]}>
+                        {item.currency === 'USD' ? `$${item.yearlyAmount}` : yen(item.yearlyAmount)}<Text style={s.billingPlanPer}>/年</Text>
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#CBD5E0" />
+                  </TouchableOpacity>
+                )}
               </Animated.View>
             </>
           );
@@ -1592,9 +1665,8 @@ const s = StyleSheet.create({
   tmplGridMeta:           { fontSize: 10, color: '#A0AEC0', textAlign: 'center' },
   tmplGridAmt:            { fontSize: 10, fontWeight: '700', color: '#475569', textAlign: 'center' },
   tmplGridBilling:        { width: '100%', gap: 3 },
-  tmplGridBillingBtn:     { backgroundColor: '#EEF2FF', borderRadius: 6, paddingVertical: 3, alignItems: 'center' },
-  tmplGridBillingBtnYear: { backgroundColor: '#F0FDF4' },
-  tmplGridBillingTxt:     { fontSize: 9, fontWeight: '700', color: '#475569' },
+  tmplGridBillingTxt:     { fontSize: 9, fontWeight: '700', color: '#475569', textAlign: 'center' },
+  tmplGridBillingTxtYear: { color: '#D97706' },
   tmplItem:               { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', backgroundColor: '#fff', gap: 12 },
   tmplItemIcon:           { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   tmplItemName:           { fontSize: 15, fontWeight: '600', color: '#1A202C' },
@@ -1676,7 +1748,22 @@ const s = StyleSheet.create({
   calCellSun:       { color: '#EF4444' },
   calCellSat:       { color: '#3B82F6' },
   calCellTextSel:   { color: '#fff' },
-  calConfirmBtn:    { marginTop: 16 },
+  calTapHint:       { textAlign: 'center', fontSize: 12, color: '#A0AEC0', marginTop: 10, marginBottom: 4 },
+
+  // プラン選択ボトムシート
+  billingSheet:         { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: 40, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 16 },
+  billingSheetHandle:   { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 12, marginBottom: 12 },
+  billingSheetHead:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, marginBottom: 8 },
+  billingSheetIcon:     { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  billingSheetName:     { flex: 1, fontSize: 16, fontWeight: '700', color: '#1A202C' },
+  billingPlanRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: '#EDF2F7' },
+  billingPlanRowYear:   { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+  billingPlanLeft:      { flex: 1 },
+  billingPlanLabel:     { fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 2 },
+  billingPlanLabelYear: { color: '#D97706' },
+  billingPlanAmt:       { fontSize: 22, fontWeight: '800', color: '#1A202C' },
+  billingPlanAmtYear:   { color: '#D97706' },
+  billingPlanPer:       { fontSize: 13, fontWeight: '400', color: '#94A3B8' },
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
