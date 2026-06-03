@@ -55,8 +55,12 @@ export default function SettingsScreen() {
   };
 
   const removeDay = (n: number) => {
-    if (notifSettings.daysBefore.length <= 1) return;
-    setNotifSettings({ ...notifSettings, daysBefore: notifSettings.daysBefore.filter(d => d !== n) });
+    const next = notifSettings.daysBefore.filter(d => d !== n);
+    if (next.length === 0) {
+      setNotifSettings({ ...notifSettings, enabled: false, daysBefore: next });
+    } else {
+      setNotifSettings({ ...notifSettings, daysBefore: next });
+    }
   };
 
   return (
@@ -134,8 +138,6 @@ export default function SettingsScreen() {
                 style={c.daysInput}
                 value={daysInput}
                 onChangeText={setDaysInput}
-                placeholder="日数"
-                placeholderTextColor="#CBD5E0"
                 keyboardType="number-pad"
                 maxLength={2}
                 editable={notifSettings.enabled}

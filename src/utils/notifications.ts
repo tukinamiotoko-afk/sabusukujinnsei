@@ -61,8 +61,8 @@ export async function scheduleExpenseNotifications(
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: `💳 ${label}の支払い`,
-          body: `${names}  合計 ¥${Math.round(total).toLocaleString('ja-JP')}`,
+          title: `💳 ${label}の支払いが迫っています`,
+          body: `${hits.length}件  合計 ¥${Math.round(total).toLocaleString('ja-JP')} の支払いが迫っています`,
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: notifyDate },
       });
