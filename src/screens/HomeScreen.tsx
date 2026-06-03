@@ -1585,6 +1585,8 @@ export default function HomeScreen() {
   );
   const annualTotal = monthlyTotal * 12;
 
+  const addCountRef = useRef(0); // 広告表示カウンター（2回に1回）
+
   // カウントアップ/ダウンアニメーション
   const animVal           = useRef(new Animated.Value(0)).current;
   const monthlyTotalRef   = useRef(monthlyTotal);
@@ -1684,13 +1686,19 @@ export default function HomeScreen() {
       editId ? prev.map(e => e.id === editId ? exp : e) : [...prev, exp]
     );
     setModalVisible(false);
-    if (!editId && !isPro) setAdVisible(true);
+    if (!editId && !isPro) {
+      addCountRef.current += 1;
+      if (addCountRef.current % 2 === 0) setAdVisible(true);
+    }
   };
 
   const handleQuickAdd = (exp: Expense) => {
     setExpenses(prev => [...prev, exp]);
     setModalVisible(false);
-    if (!isPro) setAdVisible(true);
+    if (!isPro) {
+      addCountRef.current += 1;
+      if (addCountRef.current % 2 === 0) setAdVisible(true);
+    }
   };
 
   const handleDelete = (id: string) => {
