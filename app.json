@@ -24,6 +24,8 @@
     "web": {
       "favicon": "./assets/sabusukujinsei_aikon.png"
     },
-    "plugins": []
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/sabusukujinsei_aikon.png", "color": "#475569" }]
+    ]
   }
 }

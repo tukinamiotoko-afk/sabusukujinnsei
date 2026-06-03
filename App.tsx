@@ -6,6 +6,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { ExpensesProvider } from './src/context/ExpensesContext';
+import { SettingsProvider } from './src/context/SettingsContext';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 enableScreens();
 import HomeScreen from './src/screens/HomeScreen';
@@ -40,8 +42,10 @@ function TabNavigator() {
             iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'カレンダー') {
             iconName = focused ? 'calendar' : 'calendar-outline';
-          } else {
+          } else if (route.name === '一括削除') {
             iconName = focused ? 'trash' : 'trash-outline';
+          } else {
+            iconName = focused ? 'settings' : 'settings-outline';
           }
           return <Ionicons name={iconName as never} size={size} color={color} />;
         },
@@ -50,6 +54,7 @@ function TabNavigator() {
       <Tab.Screen name="一覧" component={HomeScreen} />
       <Tab.Screen name="カレンダー" component={CalendarScreen} />
       <Tab.Screen name="一括削除" component={SimulatorScreen} />
+      <Tab.Screen name="設定" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
@@ -59,9 +64,11 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <ExpensesProvider>
-        <NavigationContainer>
-          <TabNavigator />
-        </NavigationContainer>
+        <SettingsProvider>
+          <NavigationContainer>
+            <TabNavigator />
+          </NavigationContainer>
+        </SettingsProvider>
       </ExpensesProvider>
     </SafeAreaProvider>
   );
