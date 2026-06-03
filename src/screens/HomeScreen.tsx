@@ -365,9 +365,10 @@ function TemplateBrowser({
   };
 
   const handleCardTap = (cat: Category, item: TemplateItem) => {
-    const hasLocalPrice = (item.amount !== undefined && item.currency !== 'USD') || item.yearlyAmount !== undefined;
-    if (hasLocalPrice) { onBillingOpen(cat, item); }
-    else { onDirectAdd(cat, item); }
+    if (item.currency === 'USD') { onDirectAdd(cat, item); return; }
+    const cycle = item.cycle ?? 'monthly';
+    if (cycle !== 'monthly' && cycle !== 'yearly') { onDirectAdd(cat, item); return; }
+    onBillingOpen(cat, item);
   };
 
   // Level 3: プラン一覧
@@ -652,6 +653,7 @@ function ExpenseModal({
     cat: Category; item: TemplateItem;
     plan: 'monthly' | 'yearly';
     tempDay: string; tempNextDate: Date;
+    tempAmount: string;
     groupPlans?: TemplateItem[];
     selectedPlanIdx: number;
   } | null>(null);
@@ -665,6 +667,7 @@ function ExpenseModal({
       plan: (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly',
       tempDay: String(today.getDate()),
       tempNextDate: today,
+      tempAmount: item.amount !== undefined ? String(item.amount) : '',
     });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
@@ -678,6 +681,7 @@ function ExpenseModal({
       plan: (first.cycle === 'yearly' || first.amount === undefined) ? 'yearly' : 'monthly',
       tempDay: String(today.getDate()),
       tempNextDate: today,
+      tempAmount: first.amount !== undefined ? String(first.amount) : '',
     });
     Animated.timing(billingAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
@@ -689,10 +693,15 @@ function ExpenseModal({
 
   const handleBillingConfirm = () => {
     if (!billingItem) return;
-    const { cat, item, plan, tempDay, tempNextDate } = billingItem;
+    const { cat, item, plan, tempDay, tempNextDate, tempAmount } = billingItem;
     const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
     const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
-    const amount = effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount ?? 0) : (item.amount ?? 0);
+    const presetAmt = effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount;
+    const amount = presetAmt !== undefined ? presetAmt : (parseInt(tempAmount, 10) || 0);
+    if (amount <= 0) {
+      Alert.alert('入力エラー', '金額を入力してください');
+      return;
+    }
     let nextDate: Date;
     if (effectivePlan === 'yearly') {
       nextDate = tempNextDate;
@@ -1191,11 +1200,13 @@ function ExpenseModal({
 
         {/* プラン選択ボトムシート（calSheetより先に描画→calSheetが上に重なる） */}
         {billingItem && (() => {
-          const { cat, item, plan, tempDay, tempNextDate, groupPlans, selectedPlanIdx } = billingItem;
+          const { cat, item, plan, tempDay, tempNextDate, tempAmount, groupPlans, selectedPlanIdx } = billingItem;
           const { color: catColor, icon: catIcon } = CAT[cat];
           const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
           const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
           const groupName = groupPlans ? (item.group ?? item.name) : item.name;
+          const presetAmt = effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount;
+          const showAmtInput = presetAmt === undefined;
           return (
             <>
               <TouchableOpacity
@@ -1215,7 +1226,7 @@ function ExpenseModal({
                   }
                   <View style={{ flex: 1 }}>
                     <Text style={s.billingSheetName}>{groupName}</Text>
-                    {!hasBothPlans && !groupPlans && (
+                    {!hasBothPlans && !groupPlans && !showAmtInput && (
                       <Text style={s.billingSheetSinglePrice}>
                         {item.currency === 'USD'
                           ? `$${effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount}`
@@ -1240,7 +1251,7 @@ function ExpenseModal({
                         style={[s.groupPlanChip, selectedPlanIdx === i && s.groupPlanChipSel]}
                         onPress={() => {
                           const newPlan: 'monthly' | 'yearly' = (p.cycle === 'yearly' || p.amount === undefined) ? 'yearly' : 'monthly';
-                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan }));
+                          setBillingItem(b => b && ({ ...b, item: p, selectedPlanIdx: i, plan: newPlan, tempAmount: p.amount !== undefined ? String(p.amount) : '' }));
                         }}
                         activeOpacity={0.75}
                       >
@@ -1281,6 +1292,24 @@ function ExpenseModal({
                         <Text style={s.billingPlanOptPer}>/年</Text>
                       </Text>
                     </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* 金額入力（プリセット価格がない場合） */}
+                {showAmtInput && (
+                  <View style={s.billingAmtSection}>
+                    <Text style={s.qaDayPrompt}>金額（円）</Text>
+                    <View style={s.billingAmtRow}>
+                      <Text style={s.billingAmtSign}>¥</Text>
+                      <TextInput
+                        style={s.billingAmtInput}
+                        value={tempAmount}
+                        onChangeText={v => setBillingItem(b => b && ({ ...b, tempAmount: v.replace(/[^0-9]/g, '') }))}
+                        placeholder="0"
+                        placeholderTextColor="#CBD5E0"
+                        keyboardType="number-pad"
+                      />
+                    </View>
                   </View>
                 )}
 
@@ -1882,6 +1911,12 @@ const s = StyleSheet.create({
   groupPlanChipAmtSel:  { color: '#fff' },
   groupPlanChipPer:     { fontSize: 10, fontWeight: '400', color: '#94A3B8' },
   groupPlanChipPerSel:  { color: 'rgba(255,255,255,0.6)' },
+
+  // 金額入力（ビリングシート内）
+  billingAmtSection:    { marginBottom: 16 },
+  billingAmtRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 14, borderWidth: 2, borderColor: '#D1D5DB', paddingLeft: 16, overflow: 'hidden', marginTop: 10 },
+  billingAmtSign:       { fontSize: 22, fontWeight: '700', color: '#4A5568' },
+  billingAmtInput:      { flex: 1, fontSize: 28, fontWeight: '800', color: '#475569', paddingVertical: 10, paddingLeft: 6, paddingRight: 16 },
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
