@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExpensesProvider } from './src/context/ExpensesContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import SettingsScreen from './src/screens/SettingsScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 
 enableScreens();
 import HomeScreen from './src/screens/HomeScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SimulatorScreen from './src/screens/SimulatorScreen';
 import ChartScreen from './src/screens/ChartScreen';
+
+const ONBOARDING_KEY = 'onboarding_done_v1';
 
 const Tab = createBottomTabNavigator();
 
@@ -64,16 +68,33 @@ function TabNavigator() {
 }
 
 export default function App() {
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then(v => setOnboardingDone(v === 'true'));
+  }, []);
+
+  const finishOnboarding = () => {
+    AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    setOnboardingDone(true);
+  };
+
+  if (onboardingDone === null) return null;
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <ExpensesProvider>
-        <SettingsProvider>
-          <NavigationContainer>
-            <TabNavigator />
-          </NavigationContainer>
-        </SettingsProvider>
-      </ExpensesProvider>
+      {!onboardingDone ? (
+        <OnboardingScreen onDone={finishOnboarding} />
+      ) : (
+        <ExpensesProvider>
+          <SettingsProvider>
+            <NavigationContainer>
+              <TabNavigator />
+            </NavigationContainer>
+          </SettingsProvider>
+        </ExpensesProvider>
+      )}
     </SafeAreaProvider>
   );
 }
