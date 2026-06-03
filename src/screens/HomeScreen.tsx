@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
+const TMPL_CARD_W = Math.floor((SCREEN_W - 24 - 16) / 3);
 const SWIPE_ACTION_W   = 96;
 const SWIPE_THRESHOLD  = 44;
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -257,13 +258,18 @@ function BillingButtons({ item, cat, onDirectAdd }: {
   );
 }
 
-function TemplateBrowser({ onDirectAdd }: {
+function TemplateBrowser({
+  onDirectAdd,
+  activeCategory, setActiveCategory,
+  activeSubcat, setActiveSubcat,
+  activeGroup, setActiveGroup,
+}: {
   onDirectAdd: (cat: Category, item: TemplateItem) => void;
+  activeCategory: Category | null; setActiveCategory: (c: Category | null) => void;
+  activeSubcat: string | null;     setActiveSubcat:   (s: string | null) => void;
+  activeGroup: string | null;      setActiveGroup:    (g: string | null) => void;
 }) {
-  const [search, setSearch]         = useState('');
-  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
-  const [activeSubcat, setActiveSubcat]     = useState<string | null>(null);
-  const [activeGroup, setActiveGroup]       = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const searchResults = useMemo(() => {
     if (!search.trim()) return null;
@@ -271,9 +277,7 @@ function TemplateBrowser({ onDirectAdd }: {
     const hits: { cat: Category; item: TemplateItem }[] = [];
     for (const cat of CATEGORIES) {
       for (const item of TEMPLATES[cat]) {
-        if (item.name.toLowerCase().includes(q)) {
-          hits.push({ cat, item });
-        }
+        if (item.name.toLowerCase().includes(q)) hits.push({ cat, item });
       }
     }
     return hits;
@@ -309,156 +313,15 @@ function TemplateBrowser({ onDirectAdd }: {
               <Text style={s.tmplEmptyText}>「{search}」は見つかりませんでした</Text>
               <Text style={s.tmplEmptySubText}>カスタムタブから手動で追加できます</Text>
             </View>
-          ) : (
-            searchResults!.map(({ cat, item }, i) => {
-              const { color, icon } = CAT[cat];
-              if (item.yearlyAmount !== undefined) {
-                return (
-                  <View key={i} style={s.tmplItem}>
-                    <TmplIcon name={item.name} color={color} icon={icon} />
-                    <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{item.name}</Text>
-                    <BillingButtons item={item} cat={cat} onDirectAdd={onDirectAdd} />
-                  </View>
-                );
-              }
-              return (
-                <TouchableOpacity key={i} style={s.tmplItem}
-                  onPress={() => onDirectAdd(cat, item)}
-                  activeOpacity={0.7}>
-                  <TmplIcon name={item.name} color={color} icon={icon} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.tmplItemName}>{item.name}</Text>
-                    <Text style={s.tmplItemMeta}>{CAT[cat].label}</Text>
-                  </View>
-                  {item.amount !== undefined && (
-                    <Text style={s.tmplItemAmount}>
-                      {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
-                    </Text>
-                  )}
-                  <Ionicons name="add-circle-outline" size={22} color="#475569" />
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </ScrollView>
-      </View>
-    );
-  }
-
-  // Level 3: プラン一覧
-  if (activeGroup !== null && activeCategory !== null) {
-    const { label, color, icon } = CAT[activeCategory];
-    const plans = TEMPLATES[activeCategory].filter(i => i.group === activeGroup);
-    return (
-      <View style={{ flex: 1 }}>
-        {renderSearchBar(false)}
-        <TouchableOpacity style={s.tmplBack} onPress={() => setActiveGroup(null)}>
-          <Ionicons name="chevron-back" size={18} color="#475569" />
-          <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon as never} size={14} color={color} />
-          </View>
-          <Text style={s.tmplBackLabel}>{activeGroup}</Text>
-        </TouchableOpacity>
-        <ScrollView keyboardShouldPersistTaps="handled">
-          {plans.map((item, i) => {
-            const planLabel = item.planName ?? item.name;
-            if (item.yearlyAmount !== undefined) {
-              return (
-                <View key={i} style={s.tmplItem}>
-                  <TmplIcon name={item.name} color={color} icon={icon} />
-                  <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{planLabel}</Text>
-                  <BillingButtons item={item} cat={activeCategory} onDirectAdd={onDirectAdd} />
-                </View>
-              );
-            }
+          ) : searchResults!.map(({ cat, item }, i) => {
+            const { color, icon } = CAT[cat];
             return (
               <TouchableOpacity key={i} style={s.tmplItem}
-                onPress={() => onDirectAdd(activeCategory, item)}
-                activeOpacity={0.7}>
-                <TmplIcon name={item.name} color={color} icon={icon} />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.tmplItemName}>{planLabel}</Text>
-                  {item.amount !== undefined && (
-                    <Text style={s.tmplItemMeta}>{yen(item.amount)}/月</Text>
-                  )}
-                </View>
-                <Ionicons name="add-circle-outline" size={22} color="#475569" />
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-    );
-  }
-
-  // Level 2: サービス一覧（subscription はサブカテゴリでフィルタ）
-  if (activeCategory !== null && (activeCategory !== 'subscription' || activeSubcat !== null)) {
-    const { label, color, icon } = CAT[activeCategory];
-    const sourceItems = activeCategory === 'subscription' && activeSubcat !== null
-      ? TEMPLATES['subscription'].filter(i => i.subcat === activeSubcat)
-      : TEMPLATES[activeCategory];
-    const entries = buildServiceEntries(sourceItems);
-    const backLabel = activeCategory === 'subscription' && activeSubcat !== null
-      ? SUBSCRIPTION_SUBCATS[activeSubcat]?.label ?? label
-      : label;
-    const backColor = activeCategory === 'subscription' && activeSubcat !== null
-      ? SUBSCRIPTION_SUBCATS[activeSubcat]?.color ?? color
-      : color;
-    const backIcon = activeCategory === 'subscription' && activeSubcat !== null
-      ? SUBSCRIPTION_SUBCATS[activeSubcat]?.icon ?? icon
-      : icon;
-    return (
-      <View style={{ flex: 1 }}>
-        {renderSearchBar(false)}
-        <TouchableOpacity
-          style={s.tmplBack}
-          onPress={() => {
-            if (activeCategory === 'subscription') {
-              setActiveSubcat(null);
-            } else {
-              setActiveCategory(null);
-              setActiveGroup(null);
-            }
-          }}
-        >
-          <Ionicons name="chevron-back" size={18} color="#475569" />
-          <View style={[s.tmplBackIcon, { backgroundColor: backColor + '20' }]}>
-            <Ionicons name={backIcon as never} size={14} color={backColor} />
-          </View>
-          <Text style={s.tmplBackLabel}>{backLabel}</Text>
-        </TouchableOpacity>
-        <ScrollView keyboardShouldPersistTaps="handled">
-          {entries.map((entry, i) => {
-            if (entry.type === 'group') {
-              return (
-                <TouchableOpacity key={i} style={s.tmplItem} onPress={() => setActiveGroup(entry.key)} activeOpacity={0.7}>
-                  <TmplIcon name={entry.key} color={color} icon={icon} />
-                  <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{entry.key}</Text>
-                  <View style={s.planBadge}>
-                    <Text style={s.planBadgeText}>{entry.items.length}プラン</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color="#CBD5E0" />
-                </TouchableOpacity>
-              );
-            }
-            const item = entry.item;
-            if (item.yearlyAmount !== undefined) {
-              return (
-                <View key={i} style={s.tmplItem}>
-                  <TmplIcon name={item.name} color={color} icon={icon} />
-                  <Text style={[s.tmplItemName, { flex: 1 }]} numberOfLines={1}>{item.name}</Text>
-                  <BillingButtons item={item} cat={activeCategory} onDirectAdd={onDirectAdd} />
-                </View>
-              );
-            }
-            return (
-              <TouchableOpacity key={i} style={s.tmplItem}
-                onPress={() => onDirectAdd(activeCategory, item)}
-                activeOpacity={0.7}>
+                onPress={() => onDirectAdd(cat, item)} activeOpacity={0.7}>
                 <TmplIcon name={item.name} color={color} icon={icon} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.tmplItemName}>{item.name}</Text>
-                  {item.cycle && <Text style={s.tmplItemMeta}>{CYCLE_LABEL[item.cycle]}</Text>}
+                  <Text style={s.tmplItemMeta}>{CAT[cat].label}</Text>
                 </View>
                 {item.amount !== undefined && (
                   <Text style={s.tmplItemAmount}>
@@ -474,34 +337,53 @@ function TemplateBrowser({ onDirectAdd }: {
     );
   }
 
-  // Level 1.5: サブスク サブカテゴリグリッド
-  if (activeCategory === 'subscription' && activeSubcat === null) {
-    const { label, color, icon } = CAT['subscription'];
+  const renderGridBilling = (item: TemplateItem, cat: Category) => {
+    if (item.yearlyAmount !== undefined) {
+      return (
+        <View style={s.tmplGridBilling}>
+          <TouchableOpacity style={s.tmplGridBillingBtn}
+            onPress={() => onDirectAdd(cat, item)}>
+            <Text style={s.tmplGridBillingTxt}>
+              月{item.amount !== undefined ? (item.currency === 'USD' ? ` $${item.amount}` : ` ${yen(item.amount)}`) : ''}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.tmplGridBillingBtn, s.tmplGridBillingBtnYear]}
+            onPress={() => onDirectAdd(cat, { ...item, amount: item.yearlyAmount!, cycle: 'yearly' })}>
+            <Text style={s.tmplGridBillingTxt}>
+              年{item.currency === 'USD' ? ` $${item.yearlyAmount}` : ` ${yen(item.yearlyAmount!)}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (item.amount !== undefined) {
+      return (
+        <Text style={s.tmplGridAmt}>
+          {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
+        </Text>
+      );
+    }
+    return null;
+  };
+
+  // Level 3: プラン一覧
+  if (activeGroup !== null && activeCategory !== null) {
+    const { color, icon } = CAT[activeCategory];
+    const plans = TEMPLATES[activeCategory].filter(i => i.group === activeGroup);
     return (
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
-        <TouchableOpacity style={s.tmplBack} onPress={() => { setActiveCategory(null); setActiveGroup(null); }}>
-          <Ionicons name="chevron-back" size={18} color="#475569" />
-          <View style={[s.tmplBackIcon, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon as never} size={14} color={color} />
-          </View>
-          <Text style={s.tmplBackLabel}>{label}</Text>
-        </TouchableOpacity>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplCatGrid}>
-          {Object.entries(SUBSCRIPTION_SUBCATS).map(([key, cfg]) => {
-            const count = TEMPLATES['subscription'].filter(i => i.subcat === key).length;
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
+          {plans.map((item, i) => {
+            const label = item.planName ?? item.name;
             return (
-              <TouchableOpacity
-                key={key}
-                style={s.tmplCatCard}
-                onPress={() => setActiveSubcat(key)}
-                activeOpacity={0.75}
-              >
-                <View style={[s.tmplCatIcon, { backgroundColor: cfg.color + '20' }]}>
-                  <Ionicons name={cfg.icon as never} size={26} color={cfg.color} />
+              <TouchableOpacity key={i} style={s.tmplGridCard}
+                onPress={() => onDirectAdd(activeCategory, item)} activeOpacity={0.75}>
+                <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                  <Ionicons name={icon as never} size={22} color={color} />
                 </View>
-                <Text style={s.tmplCatLabel}>{cfg.label}</Text>
-                <Text style={s.tmplCatCount}>{count}件</Text>
+                <Text style={s.tmplGridName} numberOfLines={2}>{label}</Text>
+                {renderGridBilling(item, activeCategory)}
               </TouchableOpacity>
             );
           })}
@@ -510,26 +392,92 @@ function TemplateBrowser({ onDirectAdd }: {
     );
   }
 
-  // Level 1: カテゴリグリッド
+  // Level 2: サービス一覧
+  if (activeCategory !== null && (activeCategory !== 'subscription' || activeSubcat !== null)) {
+    const { color, icon } = CAT[activeCategory];
+    const src = activeCategory === 'subscription' && activeSubcat !== null
+      ? TEMPLATES['subscription'].filter(i => i.subcat === activeSubcat)
+      : TEMPLATES[activeCategory];
+    const entries = buildServiceEntries(src);
+    return (
+      <View style={{ flex: 1 }}>
+        {renderSearchBar(false)}
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
+          {entries.map((entry, i) => {
+            if (entry.type === 'group') {
+              return (
+                <TouchableOpacity key={i} style={s.tmplGridCard}
+                  onPress={() => setActiveGroup(entry.key)} activeOpacity={0.75}>
+                  {hasServiceIcon(entry.key)
+                    ? <ServiceIcon name={entry.key} size={40} />
+                    : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                        <Ionicons name={icon as never} size={22} color={color} />
+                      </View>}
+                  <Text style={s.tmplGridName} numberOfLines={2}>{entry.key}</Text>
+                  <Text style={s.tmplGridMeta}>{entry.items.length}プラン</Text>
+                </TouchableOpacity>
+              );
+            }
+            const item = entry.item;
+            return (
+              <TouchableOpacity key={i} style={s.tmplGridCard}
+                onPress={() => onDirectAdd(activeCategory, item)} activeOpacity={0.7}>
+                {hasServiceIcon(item.name)
+                  ? <ServiceIcon name={item.name} size={40} />
+                  : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                      <Ionicons name={icon as never} size={22} color={color} />
+                    </View>}
+                <Text style={s.tmplGridName} numberOfLines={2}>{item.name}</Text>
+                {renderGridBilling(item, activeCategory)}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Level 1.5: サブスク サブカテゴリ
+  if (activeCategory === 'subscription') {
+    return (
+      <View style={{ flex: 1 }}>
+        {renderSearchBar(false)}
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
+          {Object.entries(SUBSCRIPTION_SUBCATS).map(([key, cfg]) => {
+            const count = TEMPLATES['subscription'].filter(i => i.subcat === key).length;
+            return (
+              <TouchableOpacity key={key} style={s.tmplGridCard}
+                onPress={() => setActiveSubcat(key)} activeOpacity={0.75}>
+                <View style={[s.tmplGridIcon, { backgroundColor: cfg.color + '20' }]}>
+                  <Ionicons name={cfg.icon as never} size={22} color={cfg.color} />
+                </View>
+                <Text style={s.tmplGridName}>{cfg.label}</Text>
+                <Text style={s.tmplGridMeta}>{count}件</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Level 1: カテゴリ
   return (
     <View style={{ flex: 1 }}>
       {renderSearchBar(false)}
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplCatGrid}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
         {CATEGORIES.map(cat => {
           const { label, color, icon } = CAT[cat];
           const count = TEMPLATES[cat].length;
           return (
-            <TouchableOpacity
-              key={cat}
-              style={s.tmplCatCard}
+            <TouchableOpacity key={cat} style={s.tmplGridCard}
               onPress={() => { setActiveCategory(cat); setActiveSubcat(null); setActiveGroup(null); }}
-              activeOpacity={0.75}
-            >
-              <View style={[s.tmplCatIcon, { backgroundColor: color + '20' }]}>
-                <Ionicons name={icon as never} size={26} color={color} />
+              activeOpacity={0.75}>
+              <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                <Ionicons name={icon as never} size={22} color={color} />
               </View>
-              <Text style={s.tmplCatLabel}>{label}</Text>
-              <Text style={s.tmplCatCount}>{count}件</Text>
+              <Text style={s.tmplGridName}>{label}</Text>
+              <Text style={s.tmplGridMeta}>{count}件</Text>
             </TouchableOpacity>
           );
         })}
@@ -681,6 +629,9 @@ function ExpenseModal({
   onQuickAdd: (exp: Expense) => void;
 }) {
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
+  const [tmplCat, setTmplCat]       = useState<Category | null>(null);
+  const [tmplSubcat, setTmplSubcat] = useState<string | null>(null);
+  const [tmplGroup, setTmplGroup]   = useState<string | null>(null);
   const [showDate, setShowDate] = useState(false);
   const [catPanel, setCatPanel] = useState(false);
   const [payPanel, setPayPanel] = useState(false);
@@ -761,6 +712,17 @@ function ExpenseModal({
     closeQuickPanel();
   };
 
+  const handleTmplBack = () => {
+    if (tmplGroup !== null)                                   { setTmplGroup(null); return; }
+    if (tmplCat === 'subscription' && tmplSubcat !== null)   { setTmplSubcat(null); return; }
+    setTmplCat(null); setTmplSubcat(null); setTmplGroup(null);
+  };
+
+  // モーダルを閉じたときにテンプレート階層をリセット
+  useEffect(() => {
+    if (!visible) { setTmplCat(null); setTmplSubcat(null); setTmplGroup(null); }
+  }, [visible]);
+
   // Android 戻るボタン: パネルを順に閉じる
   useEffect(() => {
     if (!visible) return;
@@ -768,11 +730,12 @@ function ExpenseModal({
       if (quickItem) { closeQuickPanel(); return true; }
       if (catPanel)  { closeCatPanel();   return true; }
       if (payPanel)  { closePayPanel();   return true; }
+      if (tmplCat !== null) { handleTmplBack(); return true; }
       onClose();
       return true;
     });
     return () => sub.remove();
-  }, [visible, quickItem, catPanel, payPanel]);
+  }, [visible, quickItem, catPanel, payPanel, tmplCat, tmplSubcat, tmplGroup]);
 
   // 編集時はカスタムタブ固定
   const activeTab = isEdit ? 'custom' : tab;
@@ -831,16 +794,33 @@ function ExpenseModal({
         <View style={s.modalRoot}>
           {/* ヘッダ */}
           <View style={s.modalHeader}>
-            <TouchableOpacity onPress={onClose} style={s.modalBtn}>
-              <Text style={s.modalBtnCancel}>キャンセル</Text>
-            </TouchableOpacity>
-            <Text style={s.modalTitle}>{isEdit ? '支出を編集' : '支出を追加'}</Text>
-            {activeTab === 'custom' ? (
-              <TouchableOpacity onPress={onSave} style={s.modalBtn}>
-                <Text style={s.modalBtnSave}>保存</Text>
-              </TouchableOpacity>
+            {activeTab === 'template' && tmplCat !== null ? (
+              <>
+                <TouchableOpacity onPress={handleTmplBack} style={s.modalBtn}>
+                  <Ionicons name="chevron-back" size={24} color="#475569" />
+                </TouchableOpacity>
+                <Text style={s.modalTitle}>
+                  {tmplGroup
+                    ?? (tmplCat === 'subscription' && tmplSubcat
+                        ? SUBSCRIPTION_SUBCATS[tmplSubcat]?.label
+                        : CAT[tmplCat].label)}
+                </Text>
+                <View style={s.modalBtn} />
+              </>
             ) : (
-              <View style={s.modalBtn} />
+              <>
+                <TouchableOpacity onPress={onClose} style={s.modalBtn}>
+                  <Text style={s.modalBtnCancel}>キャンセル</Text>
+                </TouchableOpacity>
+                <Text style={s.modalTitle}>{isEdit ? '支出を編集' : '支出を追加'}</Text>
+                {activeTab === 'custom' ? (
+                  <TouchableOpacity onPress={onSave} style={s.modalBtn}>
+                    <Text style={s.modalBtnSave}>保存</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={s.modalBtn} />
+                )}
+              </>
             )}
           </View>
 
@@ -869,7 +849,12 @@ function ExpenseModal({
           {/* コンテンツ */}
           <View style={{ flex: 1 }}>
             {activeTab === 'template' ? (
-              <TemplateBrowser onDirectAdd={openQuickPanel} />
+              <TemplateBrowser
+                onDirectAdd={openQuickPanel}
+                activeCategory={tmplCat}    setActiveCategory={setTmplCat}
+                activeSubcat={tmplSubcat}   setActiveSubcat={setTmplSubcat}
+                activeGroup={tmplGroup}     setActiveGroup={setTmplGroup}
+              />
             ) : (
               <CustomForm
                 form={form}
@@ -1412,25 +1397,27 @@ const s = StyleSheet.create({
   tabBtnTextActive:  { color: '#475569' },
 
   // テンプレートブラウザ
-  searchWrap:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  searchIcon:        { marginRight: 2 },
-  searchInput:       { flex: 1, fontSize: 15, color: '#1A202C', padding: 0 },
-  tmplCatGrid:       { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10, paddingBottom: 20 },
-  tmplCatCard:       { width: '47%', backgroundColor: '#fff', borderRadius: 16, padding: 16, alignItems: 'center', gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  tmplCatIcon:       { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  tmplCatLabel:      { fontSize: 14, fontWeight: '700', color: '#1A202C' },
-  tmplCatCount:      { fontSize: 12, color: '#A0AEC0' },
-  tmplBack:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderBottomWidth: 1, borderBottomColor: '#EDF2F7', backgroundColor: '#fff' },
-  tmplBackIcon:      { width: 24, height: 24, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  tmplBackLabel:     { fontSize: 15, fontWeight: '700', color: '#1A202C' },
-  tmplItem:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', backgroundColor: '#fff', gap: 12 },
-  tmplItemIcon:      { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  tmplItemName:      { fontSize: 15, fontWeight: '600', color: '#1A202C' },
-  tmplItemMeta:      { fontSize: 12, color: '#A0AEC0', marginTop: 2 },
-  tmplItemAmount:    { fontSize: 14, fontWeight: '700', color: '#475569', marginRight: 4 },
-  tmplEmpty:         { alignItems: 'center', paddingVertical: 48, gap: 8 },
-  tmplEmptyText:     { fontSize: 15, color: '#718096', fontWeight: '600' },
-  tmplEmptySubText:  { fontSize: 13, color: '#A0AEC0' },
+  searchWrap:             { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EDF2F7', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchIcon:             { marginRight: 2 },
+  searchInput:            { flex: 1, fontSize: 15, color: '#1A202C', padding: 0 },
+  tmplGrid:               { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8, paddingBottom: 24 },
+  tmplGridCard:           { width: TMPL_CARD_W, backgroundColor: '#fff', borderRadius: 14, padding: 10, alignItems: 'center', gap: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
+  tmplGridIcon:           { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  tmplGridName:           { fontSize: 11, fontWeight: '600', color: '#1A202C', textAlign: 'center' },
+  tmplGridMeta:           { fontSize: 10, color: '#A0AEC0', textAlign: 'center' },
+  tmplGridAmt:            { fontSize: 10, fontWeight: '700', color: '#475569', textAlign: 'center' },
+  tmplGridBilling:        { width: '100%', gap: 3 },
+  tmplGridBillingBtn:     { backgroundColor: '#EEF2FF', borderRadius: 6, paddingVertical: 3, alignItems: 'center' },
+  tmplGridBillingBtnYear: { backgroundColor: '#F0FDF4' },
+  tmplGridBillingTxt:     { fontSize: 9, fontWeight: '700', color: '#475569' },
+  tmplItem:               { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', backgroundColor: '#fff', gap: 12 },
+  tmplItemIcon:           { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  tmplItemName:           { fontSize: 15, fontWeight: '600', color: '#1A202C' },
+  tmplItemMeta:           { fontSize: 12, color: '#A0AEC0', marginTop: 2 },
+  tmplItemAmount:         { fontSize: 14, fontWeight: '700', color: '#475569', marginRight: 4 },
+  tmplEmpty:              { alignItems: 'center', paddingVertical: 48, gap: 8 },
+  tmplEmptyText:          { fontSize: 15, color: '#718096', fontWeight: '600' },
+  tmplEmptySubText:       { fontSize: 13, color: '#A0AEC0' },
 
   // プランバッジ
   planBadge:           { backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, marginRight: 4 },
