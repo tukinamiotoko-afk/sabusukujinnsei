@@ -28,8 +28,11 @@ export default function SettingsScreen() {
         Alert.alert('通知の許可が必要です', '設定アプリから通知を許可してください。');
         return;
       }
+      const daysBefore = notifSettings.daysBefore.length === 0 ? [0] : notifSettings.daysBefore;
+      setNotifSettings({ ...notifSettings, enabled: true, daysBefore });
+    } else {
+      setNotifSettings({ ...notifSettings, enabled: false });
     }
-    setNotifSettings({ ...notifSettings, enabled: val });
   };
 
   const TARGET_OPTIONS: { value: NotifyTarget; label: string; sub: string }[] = [
