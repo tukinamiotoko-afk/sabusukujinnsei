@@ -116,7 +116,7 @@ export default function SettingsScreen() {
               <Text style={c.daysInputLabel}>日前に通知</Text>
             </View>
             <View style={c.daysPresets}>
-              {[0, 1, 3, 7, 14].map(n => (
+              {[0, 1, 3].map(n => (
                 <TouchableOpacity
                   key={n}
                   style={[c.presetBtn, notifSettings.daysBefore === n && c.presetBtnActive]}
