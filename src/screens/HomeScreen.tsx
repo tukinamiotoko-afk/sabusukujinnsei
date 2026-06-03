@@ -363,7 +363,8 @@ function TemplateBrowser({
   };
 
   const handleCardTap = (cat: Category, item: TemplateItem) => {
-    if (item.yearlyAmount !== undefined) { onBillingOpen(cat, item); }
+    const hasLocalPrice = (item.amount !== undefined && item.currency !== 'USD') || item.yearlyAmount !== undefined;
+    if (hasLocalPrice) { onBillingOpen(cat, item); }
     else { onDirectAdd(cat, item); }
   };
 
@@ -653,7 +654,7 @@ function ExpenseModal({
     setCalViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setBillingItem({
       cat, item,
-      plan: item.amount !== undefined ? 'monthly' : 'yearly',
+      plan: (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly',
       tempDay: String(today.getDate()),
       tempNextDate: today,
     });
@@ -668,9 +669,11 @@ function ExpenseModal({
   const handleBillingConfirm = () => {
     if (!billingItem) return;
     const { cat, item, plan, tempDay, tempNextDate } = billingItem;
-    const amount = plan === 'yearly' ? item.yearlyAmount! : (item.amount ?? 0);
+    const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
+    const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
+    const amount = effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount ?? 0) : (item.amount ?? 0);
     let nextDate: Date;
-    if (plan === 'yearly') {
+    if (effectivePlan === 'yearly') {
       nextDate = tempNextDate;
     } else {
       const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -684,7 +687,7 @@ function ExpenseModal({
     }
     const exp: Expense = {
       id: genId(), name: item.name, amount, category: cat,
-      cycle: plan, nextDate: nextDate.toISOString(), memo: '',
+      cycle: effectivePlan, nextDate: nextDate.toISOString(), memo: '',
     };
     closeBillingSheet(() => onQuickAdd(exp));
   };
@@ -1168,6 +1171,8 @@ function ExpenseModal({
         {billingItem && (() => {
           const { cat, item, plan, tempDay, tempNextDate } = billingItem;
           const { color: catColor, icon: catIcon } = CAT[cat];
+          const hasBothPlans = item.amount !== undefined && item.cycle !== 'yearly' && item.yearlyAmount !== undefined;
+          const effectivePlan = hasBothPlans ? plan : (item.cycle === 'yearly' || item.amount === undefined) ? 'yearly' : 'monthly';
           return (
             <>
               <TouchableOpacity
@@ -1185,12 +1190,22 @@ function ExpenseModal({
                         <Ionicons name={catIcon as never} size={20} color={catColor} />
                       </View>
                   }
-                  <Text style={s.billingSheetName}>{item.name}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.billingSheetName}>{item.name}</Text>
+                    {!hasBothPlans && (
+                      <Text style={s.billingSheetSinglePrice}>
+                        {item.currency === 'USD'
+                          ? `$${effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount) : item.amount}`
+                          : yen(effectivePlan === 'yearly' ? (item.yearlyAmount ?? item.amount ?? 0) : (item.amount ?? 0))}
+                        <Text style={s.billingSheetPricePer}>{effectivePlan === 'yearly' ? ' /年' : ' /月'}</Text>
+                      </Text>
+                    )}
+                  </View>
                 </View>
 
-                {/* プラン選択 */}
-                <View style={s.billingPlanPicker}>
-                  {item.amount !== undefined && (
+                {/* プラン選択（月払い・年払い両方ある場合のみ） */}
+                {hasBothPlans && (
+                  <View style={s.billingPlanPicker}>
                     <TouchableOpacity
                       style={[s.billingPlanOpt, plan === 'monthly' && s.billingPlanOptSel]}
                       onPress={() => setBillingItem(b => b && ({ ...b, plan: 'monthly' }))}
@@ -1198,12 +1213,10 @@ function ExpenseModal({
                     >
                       <Text style={[s.billingPlanOptLabel, plan === 'monthly' && s.billingPlanOptLabelSel]}>月払い</Text>
                       <Text style={[s.billingPlanOptAmt, plan === 'monthly' && s.billingPlanOptAmtSel]}>
-                        {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
+                        {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount!)}
                         <Text style={s.billingPlanOptPer}>/月</Text>
                       </Text>
                     </TouchableOpacity>
-                  )}
-                  {item.yearlyAmount !== undefined && (
                     <TouchableOpacity
                       style={[s.billingPlanOpt, s.billingPlanOptYear, plan === 'yearly' && s.billingPlanOptYearSel]}
                       onPress={() => setBillingItem(b => b && ({ ...b, plan: 'yearly' }))}
@@ -1211,16 +1224,16 @@ function ExpenseModal({
                     >
                       <Text style={[s.billingPlanOptLabel, plan === 'yearly' && s.billingPlanOptLabelYearSel]}>年払い</Text>
                       <Text style={[s.billingPlanOptAmt, plan === 'yearly' && s.billingPlanOptAmtYearSel]}>
-                        {item.currency === 'USD' ? `$${item.yearlyAmount}` : yen(item.yearlyAmount)}
+                        {item.currency === 'USD' ? `$${item.yearlyAmount}` : yen(item.yearlyAmount!)}
                         <Text style={s.billingPlanOptPer}>/年</Text>
                       </Text>
                     </TouchableOpacity>
-                  )}
-                </View>
+                  </View>
+                )}
 
                 {/* 支払日 */}
                 <Text style={s.qaDayPrompt}>支払日</Text>
-                {plan === 'monthly' ? (
+                {effectivePlan === 'monthly' ? (
                   <View style={[s.qaDayRow, { marginTop: 10 }]}>
                     <Text style={s.qaDayLabel}>毎月</Text>
                     <TextInput
@@ -1791,7 +1804,9 @@ const s = StyleSheet.create({
   billingSheetHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 12, marginBottom: 12 },
   billingSheetHead:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, marginBottom: 12 },
   billingSheetIcon:         { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  billingSheetName:         { flex: 1, fontSize: 16, fontWeight: '700', color: '#1A202C' },
+  billingSheetName:         { fontSize: 16, fontWeight: '700', color: '#1A202C' },
+  billingSheetSinglePrice:  { fontSize: 14, fontWeight: '600', color: '#475569', marginTop: 3 },
+  billingSheetPricePer:     { fontSize: 11, fontWeight: '400', color: '#94A3B8' },
   billingPlanPicker:        { flexDirection: 'row', gap: 10, marginBottom: 16 },
   billingPlanOpt:           { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 2, borderColor: '#EDF2F7', alignItems: 'center', gap: 4 },
   billingPlanOptSel:        { backgroundColor: '#475569', borderColor: '#475569' },
