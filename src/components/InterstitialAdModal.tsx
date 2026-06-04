@@ -4,7 +4,7 @@ import { useInterstitialAd, TestIds } from 'react-native-google-mobile-ads';
 
 // ─── 広告ユニットID ───────────────────────────────────────────────────────────
 const ANDROID_AD_UNIT = 'ca-app-pub-6253728869800176/4548972878';
-const IOS_AD_UNIT     = 'ca-app-pub-XXXXXXXXXXXXXXXXXX/XXXXXXXXXX'; // iOS追加時に差し替え
+const IOS_AD_UNIT     = 'ca-app-pub-6253728869800176/7067325008';
 
 const AD_UNIT_ID = __DEV__
   ? TestIds.INTERSTITIAL
