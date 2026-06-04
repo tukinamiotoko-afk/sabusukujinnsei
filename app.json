@@ -25,7 +25,11 @@
       "favicon": "./assets/sabusukujinsei_aikon.png"
     },
     "plugins": [
-      ["expo-notifications", { "icon": "./assets/sabusukujinsei_aikon.png", "color": "#475569" }]
+      ["expo-notifications", { "icon": "./assets/sabusukujinsei_aikon.png", "color": "#475569" }],
+      ["react-native-google-mobile-ads", {
+        "androidAppId": "ca-app-pub-6253728869800176~1318809922",
+        "iosAppId": "ca-app-pub-XXXXXXXXXXXXXXXXXX~XXXXXXXXXX"
+      }]
     ]
   }
 }
