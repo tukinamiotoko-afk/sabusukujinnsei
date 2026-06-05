@@ -1128,18 +1128,24 @@ function ExpenseModal({
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>カテゴリを選択</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {customCategories.length > 1 && (
+                {customCategories.length > 0 && !reorderMode && (
                   <TouchableOpacity
                     style={s.catPanelReorderBtn}
-                    onPress={() => { setReorderMode(v => !v); setAddCatVisible(false); }}
+                    onPress={() => { setReorderMode(true); setAddCatVisible(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[s.catPanelReorderTxt, reorderMode && s.catPanelReorderTxtActive]}>
-                      {reorderMode ? '完了' : '並び替え'}
-                    </Text>
+                    <Text style={s.catPanelReorderTxt}>並び替え</Text>
                   </TouchableOpacity>
                 )}
-                {!reorderMode && (
+                {reorderMode ? (
+                  <TouchableOpacity
+                    style={s.catPanelReorderBtn}
+                    onPress={() => setReorderMode(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.catPanelReorderTxtActive}>完了</Text>
+                  </TouchableOpacity>
+                ) : (
                   <TouchableOpacity
                     style={s.catPanelAddBtn}
                     onPress={() => { setAddCatVisible(v => !v); setAddCatInput(''); }}
