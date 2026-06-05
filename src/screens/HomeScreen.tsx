@@ -67,6 +67,7 @@ interface FormState {
   name: string;
   amount: string;
   category: Category;
+  customCategoryLabel: string;
   cycle: Cycle;
   customCycleDays: string;
   nextDate: Date;
@@ -74,13 +75,14 @@ interface FormState {
 }
 
 const blankForm = (): FormState => ({
-  name:            '',
-  amount:          '',
-  category:        'subscription',
-  cycle:           'monthly',
-  customCycleDays: '',
-  nextDate:        new Date(),
-  memo:            '',
+  name:                '',
+  amount:              '',
+  category:            'subscription',
+  customCategoryLabel: '',
+  cycle:               'monthly',
+  customCycleDays:     '',
+  nextDate:            new Date(),
+  memo:                '',
 });
 
 // ─── ExpenseCard ─────────────────────────────────────────────────────────────
@@ -497,7 +499,10 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm(f => ({ ...f, [key]: val }));
 
-  const { label: catLabel, color: catColor, icon: catIcon } = CAT[form.category];
+  const { color: catColor, icon: catIcon } = CAT[form.category];
+  const catLabel = form.category === 'custom'
+    ? (form.customCategoryLabel || 'カスタム')
+    : CAT[form.category].label;
   const payDisplay = form.cycle === 'monthly'
     ? `毎月${form.nextDate.getDate()}日`
     : cycleDisplay(form.cycle, form.customCycleDays ? parseInt(form.customCycleDays, 10) : undefined);
@@ -550,6 +555,17 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
             <Text style={[s.dropdownTriggerText, { color: catColor }]}>{catLabel}</Text>
             <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
           </TouchableOpacity>
+          {form.category === 'custom' && (
+            <TextInput
+              style={[s.textInput, { marginTop: 8 }]}
+              value={form.customCategoryLabel}
+              onChangeText={v => set('customCategoryLabel', v)}
+              placeholder="カテゴリ名を入力"
+              placeholderTextColor="#CBD5E0"
+              returnKeyType="done"
+              autoFocus
+            />
+          )}
         </View>
 
         {/* 支払日または支払周期 */}
@@ -1028,7 +1044,7 @@ function ExpenseModal({
               <View style={{ width: 44 }} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled">
-              {CATEGORIES.map(cat => {
+              {CATEGORIES.filter(cat => cat !== 'custom').map(cat => {
                 const { label, color, icon } = CAT[cat];
                 const sel = form.category === cat;
                 return (
@@ -1049,6 +1065,20 @@ function ExpenseModal({
                   </TouchableOpacity>
                 );
               })}
+              <TouchableOpacity
+                style={[s.catPanelRow, form.category === 'custom' && s.catPanelRowSelected]}
+                onPress={() => {
+                  setForm(f => ({ ...f, category: 'custom' }));
+                  closeCatPanel();
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[s.catPanelRowIcon, { backgroundColor: '#71809620' }]}>
+                  <Ionicons name="create-outline" size={18} color="#718096" />
+                </View>
+                <Text style={[s.catPanelRowText, form.category === 'custom' && s.catPanelRowTextSel]}>自由入力</Text>
+                {form.category === 'custom' && <Ionicons name="checkmark" size={18} color="#475569" />}
+              </TouchableOpacity>
             </ScrollView>
           </Animated.View>
         )}
@@ -1660,13 +1690,14 @@ export default function HomeScreen() {
   const openEdit = (exp: Expense) => {
     setEditId(exp.id);
     setForm({
-      name:            exp.name,
-      amount:          String(exp.amount),
-      category:        exp.category,
-      cycle:           exp.cycle,
-      customCycleDays: exp.customCycleDays ? String(exp.customCycleDays) : '',
-      nextDate:        new Date(exp.nextDate),
-      memo:            exp.memo,
+      name:                exp.name,
+      amount:              String(exp.amount),
+      category:            exp.category,
+      customCategoryLabel: exp.customCategoryLabel ?? '',
+      cycle:               exp.cycle,
+      customCycleDays:     exp.customCycleDays ? String(exp.customCycleDays) : '',
+      nextDate:            new Date(exp.nextDate),
+      memo:                exp.memo,
     });
     setModalVisible(true);
   };
@@ -1689,14 +1720,15 @@ export default function HomeScreen() {
       }
     }
     const exp: Expense = {
-      id:              editId ?? genId(),
-      name:            form.name.trim(),
+      id:                  editId ?? genId(),
+      name:                form.name.trim(),
       amount,
-      category:        form.category,
-      cycle:           form.cycle,
-      customCycleDays: form.cycle === 'custom' ? parseInt(form.customCycleDays, 10) : undefined,
-      nextDate:        form.nextDate.toISOString(),
-      memo:            form.memo.trim(),
+      category:            form.category,
+      customCategoryLabel: form.category === 'custom' ? form.customCategoryLabel.trim() || undefined : undefined,
+      cycle:               form.cycle,
+      customCycleDays:     form.cycle === 'custom' ? parseInt(form.customCycleDays, 10) : undefined,
+      nextDate:            form.nextDate.toISOString(),
+      memo:                form.memo.trim(),
     };
     setExpenses(prev =>
       editId ? prev.map(e => e.id === editId ? exp : e) : [...prev, exp]
@@ -1891,7 +1923,11 @@ export default function HomeScreen() {
                     <View style={s.detailRow}>
                       <Text style={s.detailRowLabel}>カテゴリ</Text>
                       <View style={[s.detailCatBadge, { backgroundColor: color + '20' }]}>
-                        <Text style={[s.detailCatTxt, { color }]}>{CAT[detailExpense.category].label}</Text>
+                        <Text style={[s.detailCatTxt, { color }]}>
+                          {detailExpense.category === 'custom' && detailExpense.customCategoryLabel
+                            ? detailExpense.customCategoryLabel
+                            : CAT[detailExpense.category].label}
+                        </Text>
                       </View>
                     </View>
 

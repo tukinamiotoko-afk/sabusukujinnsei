@@ -4,7 +4,7 @@ export type Category =
   | 'subscription' | 'housing' | 'insurance' | 'telecom'
   | 'loan' | 'transport' | 'lesson' | 'delivery'
   | 'membership' | 'social'
-  | 'hospital' | 'haircut' | 'healthfood' | 'other';
+  | 'hospital' | 'haircut' | 'healthfood' | 'other' | 'custom';
 
 export type Cycle =
   | 'weekly' | 'monthly' | 'yearly'
@@ -16,6 +16,7 @@ export interface Expense {
   name: string;
   amount: number;
   category: Category;
+  customCategoryLabel?: string;
   cycle: Cycle;
   customCycleDays?: number;
   nextDate: string;
@@ -62,6 +63,7 @@ export const CAT: Record<Category, { label: string; color: string; icon: string 
   haircut:      { label: '散髪',           color: '#ED64A6', icon: 'cut-outline' },
   healthfood:   { label: '健康食品',       color: '#48BB78', icon: 'nutrition-outline' },
   other:        { label: 'その他',         color: '#A0AEC0', icon: 'apps-outline' },
+  custom:       { label: 'カスタム',       color: '#718096', icon: 'create-outline' },
 };
 
 export const CYCLE_LABEL: Record<Cycle, string> = {

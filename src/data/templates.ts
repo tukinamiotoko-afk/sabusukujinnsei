@@ -2315,4 +2315,5 @@ export const TEMPLATES: Record<Category, TemplateItem[]> = {
     { name: 'ガス代',  cycle: 'monthly'      },
     { name: '水道代',  cycle: 'every2months' },
   ],
+  custom: [],
 };
