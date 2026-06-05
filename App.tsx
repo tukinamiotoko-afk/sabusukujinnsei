@@ -74,7 +74,9 @@ export default function App() {
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
-    mobileAds().initialize();
+    mobileAds()
+      .initialize()
+      .catch(() => {}); // 初期化失敗してもクラッシュしない
     AsyncStorage.getItem(ONBOARDING_KEY).then(v => setOnboardingDone(v === 'true'));
   }, []);
 

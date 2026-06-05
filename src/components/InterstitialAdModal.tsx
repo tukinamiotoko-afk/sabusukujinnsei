@@ -1,13 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { useInterstitialAd, TestIds } from 'react-native-google-mobile-ads';
 
-// ─── 広告ユニットID ───────────────────────────────────────────────────────────
 const ANDROID_AD_UNIT = 'ca-app-pub-6253728869800176/4548972878';
 const IOS_AD_UNIT     = 'ca-app-pub-6253728869800176/7067325008';
 
+// react-native-google-mobile-ads は動的 import でネイティブモジュールが
+// 存在しない環境（Expo Go 等）でもクラッシュしないようにする
+let useInterstitialAd: any = null;
+let TestIds: any = null;
+try {
+  const admob = require('react-native-google-mobile-ads');
+  useInterstitialAd = admob.useInterstitialAd;
+  TestIds = admob.TestIds;
+} catch {}
+
 const AD_UNIT_ID = __DEV__
-  ? TestIds.INTERSTITIAL
+  ? (TestIds?.INTERSTITIAL ?? 'ca-app-pub-3940256099942544/1033173712')
   : Platform.OS === 'ios' ? IOS_AD_UNIT : ANDROID_AD_UNIT;
 
 interface Props {
@@ -15,14 +23,12 @@ interface Props {
   onClose: () => void;
 }
 
-export default function InterstitialAdModal({ visible, onClose }: Props) {
+function InterstitialAdModalInner({ visible, onClose }: Props) {
   const { isLoaded, isClosed, load, show, error } = useInterstitialAd(AD_UNIT_ID);
   const pendingRef = useRef(false);
 
-  // 初回ロード
   useEffect(() => { load(); }, [load]);
 
-  // visible になったら表示（ロード済みなら即表示、未ロードなら待機）
   useEffect(() => {
     if (!visible) return;
     if (isLoaded) {
@@ -33,7 +39,6 @@ export default function InterstitialAdModal({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  // ロード完了 → 待機中なら表示
   useEffect(() => {
     if (isLoaded && pendingRef.current) {
       pendingRef.current = false;
@@ -41,7 +46,6 @@ export default function InterstitialAdModal({ visible, onClose }: Props) {
     }
   }, [isLoaded]);
 
-  // 広告が閉じられたら親に通知 → 次回のために再ロード
   useEffect(() => {
     if (isClosed) {
       onClose();
@@ -49,7 +53,6 @@ export default function InterstitialAdModal({ visible, onClose }: Props) {
     }
   }, [isClosed]);
 
-  // エラー時はスキップ
   useEffect(() => {
     if (error && visible) {
       pendingRef.current = false;
@@ -57,5 +60,14 @@ export default function InterstitialAdModal({ visible, onClose }: Props) {
     }
   }, [error]);
 
-  return null; // UIはSDKが全画面で管理
+  return null;
+}
+
+export default function InterstitialAdModal({ visible, onClose }: Props) {
+  if (!useInterstitialAd) {
+    // ネイティブモジュールが利用不可の場合はスキップ
+    if (visible) { setTimeout(onClose, 0); }
+    return null;
+  }
+  return <InterstitialAdModalInner visible={visible} onClose={onClose} />;
 }
