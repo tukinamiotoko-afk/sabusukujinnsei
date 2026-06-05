@@ -1754,7 +1754,6 @@ export default function HomeScreen() {
 
       <View style={s.listHeaderWrap}>
         <View style={s.listHeaderRow}>
-          <Text style={s.listTitle}>登録一覧</Text>
           <TouchableOpacity
             style={[s.filterBtn, activeFilterCount > 0 && s.filterBtnActive]}
             onPress={() => setFilterVisible(true)}
