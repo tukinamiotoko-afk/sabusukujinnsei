@@ -720,12 +720,15 @@ function ExpenseModal({
   const reorderCatsRef = useRef(reorderCats);
   reorderCatsRef.current = reorderCats;
   const catDragAnimY = useRef(new Animated.Value(0)).current;
+  const catPanelBodyRef = useRef<View>(null);
+  const catPanelTopRef  = useRef(0);
 
   const reorderPan = useRef(PanResponder.create({
     onStartShouldSetPanResponder:        () => reorderModeRef.current,
     onStartShouldSetPanResponderCapture: () => reorderModeRef.current,
     onPanResponderGrant: (e) => {
-      const idx = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.floor(e.nativeEvent.locationY / CAT_ROW_H)));
+      const y = e.nativeEvent.pageY - catPanelTopRef.current;
+      const idx = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.floor(y / CAT_ROW_H)));
       const startY = idx * CAT_ROW_H;
       catDragAnimY.setValue(startY);
       rDragRef.current = { dragIdx: idx, startPageY: e.nativeEvent.pageY, startY };
@@ -1175,8 +1178,10 @@ function ExpenseModal({
             {/* 全カテゴリ統合リスト */}
             {reorderMode ? (
               <View
+                ref={catPanelBodyRef}
                 {...reorderPan.panHandlers}
                 style={{ flex: 1, overflow: 'hidden', position: 'relative' }}
+                onLayout={() => { catPanelBodyRef.current?.measure((_x, _y, _w, _h, _px, py) => { catPanelTopRef.current = py; }); }}
               >
                 {categoryOrder.map((id, index) => {
                   const isDragging = rDragIdx === index;
@@ -1788,12 +1793,14 @@ export default function HomeScreen() {
   setExpenseOrderRef.current = setExpenseOrder;
   const cardHeightsRef = useRef<number[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+  const listContainerRef = useRef<View>(null);
+  const listTopRef = useRef(0);
 
   const cardReorderPan = useRef(PanResponder.create({
     onStartShouldSetPanResponder:        () => cardReorderModeRef.current,
     onStartShouldSetPanResponderCapture: () => cardReorderModeRef.current,
     onPanResponderGrant: (e) => {
-      const y = e.nativeEvent.locationY;
+      const y = e.nativeEvent.pageY - listTopRef.current;
       const idx = Math.max(0, Math.min(displayedLenRef.current - 1, Math.floor(y / CARD_ITEM_H)));
       const startY = idx * CARD_ITEM_H;
       cDragAnimY.setValue(startY);
@@ -2067,7 +2074,12 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <View style={{ flex: 1, overflow: 'hidden' }}>
+      <View
+        ref={listContainerRef}
+        style={{ flex: 1, overflow: 'hidden' }}
+        onLayout={() => { listContainerRef.current?.measure((_x, _y, _w, _h, _px, py) => { listTopRef.current = py; }); }}
+        {...(cardReorderMode ? cardReorderPan.panHandlers : {})}
+      >
         <ScrollView
           ref={scrollViewRef}
           style={s.list}
@@ -2116,15 +2128,6 @@ export default function HomeScreen() {
             })
           )}
         </ScrollView>
-
-        {/* カード並び替えオーバーレイ */}
-        {cardReorderMode && (
-          <View
-            {...cardReorderPan.panHandlers}
-            style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
-            pointerEvents="box-only"
-          />
-        )}
 
         {/* フローティングカード（ドラッグ中） */}
         {cardReorderMode && cDragIdx !== null && cDragIdx < displayed.length && (
