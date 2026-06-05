@@ -1195,30 +1195,30 @@ function ExpenseModal({
               </View>
             )}
 
+            {/* カスタムカテゴリ: ScrollViewの外に置いてジェスチャー競合を回避 */}
+            {customCategories.map((cat, index) => (
+              <DraggableCatRow
+                key={cat.id}
+                cat={cat}
+                isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
+                isDragging={dragIdx === index}
+                isDropTarget={dropIdx === index && dropIdx !== dragIdx}
+                onSelect={() => {
+                  setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label }));
+                  closeCatPanel();
+                }}
+                onDragStart={(pageY) => handleDragStart(index, pageY)}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+              />
+            ))}
+
+            {customCategories.length > 0 && (
+              <View style={s.catPanelDivider} />
+            )}
+
+            {/* 組み込みカテゴリ */}
             <ScrollView keyboardShouldPersistTaps="handled">
-              {/* カスタムカテゴリ（ドラッグ並び替え対応） */}
-              {customCategories.length > 0 && customCategories.map((cat, index) => (
-                <DraggableCatRow
-                  key={cat.id}
-                  cat={cat}
-                  isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
-                  isDragging={dragIdx === index}
-                  isDropTarget={dropIdx === index && dropIdx !== dragIdx}
-                  onSelect={() => {
-                    setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label }));
-                    closeCatPanel();
-                  }}
-                  onDragStart={(pageY) => handleDragStart(index, pageY)}
-                  onDragMove={handleDragMove}
-                  onDragEnd={handleDragEnd}
-                />
-              ))}
-
-              {customCategories.length > 0 && (
-                <View style={s.catPanelDivider} />
-              )}
-
-              {/* 組み込みカテゴリ */}
               {CATEGORIES.filter(cat => cat !== 'custom').map(cat => {
                 const { label, color, icon } = CAT[cat];
                 const sel = form.category === cat;
