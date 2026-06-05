@@ -11,6 +11,8 @@ import {
   Dimensions,
   Linking,
   BackHandler,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +23,7 @@ import {
   type Expense,
 } from '../context/ExpensesContext';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
-import { getCancelUrl } from '../data/templates';
+import { getCancelUrl, getCancelSteps } from '../data/templates';
 
 const SCREEN_W = Dimensions.get('window').width;
 const yen = (n: number) => `¥${Math.round(n).toLocaleString('ja-JP')}`;
@@ -35,6 +37,7 @@ export default function SimulatorScreen() {
   const [cancelDoneIds, setCancelDoneIds] = useState<Set<string>>(new Set());
   const slideAnim = useRef(new Animated.Value(SCREEN_W)).current;
   const [cancelMode, setCancelMode] = useState(false);
+  const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
 
   const sortedExpenses = useMemo(() => {
     return expenses
@@ -265,6 +268,74 @@ export default function SimulatorScreen() {
         </View>
       )}
 
+      {/* ── 退会手順モーダル ── */}
+      <Modal
+        visible={!!detailExpense}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailExpense(null)}
+      >
+        <Pressable style={s.modalOverlay} onPress={() => setDetailExpense(null)}>
+          <Pressable style={[s.stepsSheet, { paddingBottom: insets.bottom + 20 }]} onPress={() => {}}>
+            {detailExpense && (() => {
+              const done = cancelDoneIds.has(detailExpense.id);
+              const { color, icon } = CAT[detailExpense.category];
+              const steps = getCancelSteps(detailExpense.name);
+              const cancelUrl = getCancelUrl(detailExpense.name)
+                ?? `https://www.google.com/search?q=${encodeURIComponent(detailExpense.name + ' 退会方法')}`;
+              return (
+                <>
+                  <View style={s.stepsHandle} />
+                  <View style={s.stepsHeader}>
+                    {hasServiceIcon(detailExpense.name) ? (
+                      <ServiceIcon name={detailExpense.name} size={40} />
+                    ) : (
+                      <View style={[s.catIcon, { backgroundColor: color + '20' }]}>
+                        <Ionicons name={icon as never} size={20} color={color} />
+                      </View>
+                    )}
+                    <Text style={s.stepsTitle} numberOfLines={2}>{detailExpense.name}</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={s.officialBtn}
+                    onPress={() => Linking.openURL(cancelUrl)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="globe-outline" size={16} color="#fff" />
+                    <Text style={s.officialBtnText}>公式サイトを開く</Text>
+                    <Ionicons name="open-outline" size={14} color="#fff" />
+                  </TouchableOpacity>
+
+                  <Text style={s.stepsLabel}>退会手順</Text>
+                  <ScrollView style={s.stepsScroll} showsVerticalScrollIndicator={false}>
+                    {steps.map((step, i) => (
+                      <View key={i} style={s.stepRow}>
+                        <View style={s.stepNum}>
+                          <Text style={s.stepNumText}>{i + 1}</Text>
+                        </View>
+                        <Text style={s.stepText}>{step}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    style={[s.doneBtn, done && s.doneBtnDone]}
+                    onPress={() => { toggleCancelDone(detailExpense.id); setDetailExpense(null); }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name={done ? 'checkmark-circle' : 'checkmark-circle-outline'} size={20} color={done ? '#fff' : '#48BB78'} />
+                    <Text style={[s.doneBtnText, done && s.doneBtnTextDone]}>
+                      {done ? '退会済み（タップで取り消し）' : '退会した'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ── 退会フロー画面（スライドイン） ── */}
       {cancelMode && (
         <Animated.View style={[s.flowPanel, { transform: [{ translateX: slideAnim }] }]}>
@@ -285,10 +356,13 @@ export default function SimulatorScreen() {
             {checkedExpenses.map(({ expense, monthly }) => {
               const done = cancelDoneIds.has(expense.id);
               const { color, icon } = CAT[expense.category];
-              const cancelUrl = getCancelUrl(expense.name)
-                ?? `https://www.google.com/search?q=${encodeURIComponent(expense.name + ' 退会方法')}`;
               return (
-                <View key={expense.id} style={[s.flowRow, done && s.flowRowDone]}>
+                <TouchableOpacity
+                  key={expense.id}
+                  style={[s.flowRow, done && s.flowRowDone]}
+                  onPress={() => setDetailExpense(expense)}
+                  activeOpacity={0.75}
+                >
                   <View style={s.flowRowLeft}>
                     {hasServiceIcon(expense.name) ? (
                       <ServiceIcon name={expense.name} size={42} />
@@ -307,28 +381,13 @@ export default function SimulatorScreen() {
                     </View>
                   </View>
                   <View style={s.flowRowRight}>
-                    <TouchableOpacity
-                      style={s.openUrlBtn}
-                      onPress={() => Linking.openURL(cancelUrl)}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={s.openUrlText}>
-                        {getCancelUrl(expense.name) ? '公式退会ページ' : '退会方法を検索'}
-                      </Text>
-                      <Ionicons name="open-outline" size={12} color="#3182CE" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[s.doneCheck, done && s.doneCheckDone]}
-                      onPress={() => toggleCancelDone(expense.id)}
-                      activeOpacity={0.75}
-                    >
-                      {done
-                        ? <><Ionicons name="checkmark-circle" size={16} color="#48BB78" /><Text style={s.doneCheckTextDone}>退会した</Text></>
-                        : <Text style={s.doneCheckText}>退会した</Text>
-                      }
-                    </TouchableOpacity>
+                    {done
+                      ? <Ionicons name="checkmark-circle" size={22} color="#48BB78" />
+                      : <Text style={s.flowRowHint}>手順を見る</Text>
+                    }
+                    <Ionicons name="chevron-forward" size={16} color="#CBD5E0" />
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </ScrollView>
@@ -437,6 +496,27 @@ const s = StyleSheet.create({
   bulkDeleteBtnDisabled: { backgroundColor: '#F7FAFC' },
   bulkDeleteBtnText:{ fontSize: 16, fontWeight: '700', color: '#fff' },
   bulkDeleteBtnTextDisabled: { color: '#A0AEC0' },
+
+  flowRowHint:      { fontSize: 11, fontWeight: '600', color: '#A0AEC0' },
+
+  // 手順モーダル
+  modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  stepsSheet:       { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12, maxHeight: '85%' },
+  stepsHandle:      { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 16 },
+  stepsHeader:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  stepsTitle:       { flex: 1, fontSize: 17, fontWeight: '800', color: '#1A202C' },
+  officialBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#3182CE', borderRadius: 14, paddingVertical: 13, marginBottom: 20 },
+  officialBtnText:  { fontSize: 15, fontWeight: '700', color: '#fff' },
+  stepsLabel:       { fontSize: 13, fontWeight: '700', color: '#718096', marginBottom: 10 },
+  stepsScroll:      { flexGrow: 0, marginBottom: 16 },
+  stepRow:          { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
+  stepNum:          { width: 24, height: 24, borderRadius: 12, backgroundColor: '#EBF8FF', justifyContent: 'center', alignItems: 'center', marginTop: 1 },
+  stepNumText:      { fontSize: 12, fontWeight: '800', color: '#3182CE' },
+  stepText:         { flex: 1, fontSize: 14, color: '#2D3748', lineHeight: 21 },
+  doneBtn:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: '#48BB78', borderRadius: 14, paddingVertical: 14 },
+  doneBtnDone:      { backgroundColor: '#48BB78', borderColor: '#48BB78' },
+  doneBtnText:      { fontSize: 15, fontWeight: '700', color: '#48BB78' },
+  doneBtnTextDone:  { color: '#fff' },
 
   // カラー
   textRed:          { color: '#FC5A5A' },
