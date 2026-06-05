@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  Pressable,
   TextInput,
   StyleSheet,
   Platform,
@@ -83,8 +84,8 @@ const blankForm = (): FormState => ({
 
 // ─── ExpenseCard ─────────────────────────────────────────────────────────────
 
-function ExpenseCard({ expense, onEdit, onDelete }: {
-  expense: Expense; onEdit: () => void; onDelete: () => void;
+function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
+  expense: Expense; onEdit: () => void; onDelete: () => void; onCardTap: () => void;
 }) {
   const { color, icon } = CAT[expense.category];
   const days = daysUntil(expense.nextDate);
@@ -128,7 +129,8 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
   })).current;
 
   const handleCardPress = () => {
-    if (openDir.current !== 'none') close();
+    if (openDir.current !== 'none') { close(); return; }
+    onCardTap();
   };
 
   const openCancelUrl = () => {
@@ -173,23 +175,10 @@ function ExpenseCard({ expense, onEdit, onDelete }: {
               {'  '}
               {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
             </Text>
-            {expense.memo ? <Text style={s.cardMemo} numberOfLines={1}>{expense.memo}</Text> : null}
           </View>
           <View style={s.cardRight}>
             <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
-            <View style={s.cardActions}>
-              {isSubscription && (
-                <TouchableOpacity onPress={openCancelUrl} hitSlop={8} style={s.cardActionBtn}>
-                  <Ionicons name="log-out-outline" size={16} color="#A0AEC0" />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={onDelete} hitSlop={8} style={s.cardActionBtn}>
-                <Ionicons name="trash-outline" size={16} color="#FC5A5A" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onEdit} hitSlop={8} style={s.editIconBtn}>
-                <Feather name="edit-2" size={16} color="#A0AEC0" />
-              </TouchableOpacity>
-            </View>
+            <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -1591,6 +1580,7 @@ export default function HomeScreen() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<FormState>(blankForm());
   const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name'>('date');
+  const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
 
   const monthlyTotal = expenses.reduce(
     (sum, e) => sum + monthlyEq(e.amount, e.cycle, e.customCycleDays), 0
@@ -1779,10 +1769,137 @@ export default function HomeScreen() {
               expense={exp}
               onEdit={() => openEdit(exp)}
               onDelete={() => handleDelete(exp.id)}
+              onCardTap={() => setDetailExpense(exp)}
             />
           ))
         )}
       </ScrollView>
+
+      {/* ── 詳細シート ── */}
+      <Modal
+        visible={!!detailExpense}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailExpense(null)}
+      >
+        <Pressable style={s.detailOverlay} onPress={() => setDetailExpense(null)}>
+          <Pressable style={[s.detailSheet, { paddingBottom: insets.bottom + 24 }]} onPress={() => {}}>
+            {detailExpense && (() => {
+              const { color, icon } = CAT[detailExpense.category];
+              const days   = daysUntil(detailExpense.nextDate);
+              const overdue = days < 0;
+              const soon    = days >= 0 && days <= 7;
+              const monthly = monthlyEq(detailExpense.amount, detailExpense.cycle, detailExpense.customCycleDays);
+              const billingUrl = getBillingUrl(detailExpense.name);
+              const cycleLabel = detailExpense.cycle === 'monthly' ? '/月'
+                               : detailExpense.cycle === 'yearly'  ? '/年'
+                               : detailExpense.cycle === 'custom'  ? `/${detailExpense.customCycleDays}日`
+                               : '';
+              return (
+                <>
+                  <View style={s.detailHandle} />
+                  {/* ヘッダー: 編集ボタン右上 */}
+                  <View style={s.detailTopRow}>
+                    <View style={{ flex: 1 }} />
+                    <TouchableOpacity
+                      style={s.detailEditBtn}
+                      onPress={() => { setDetailExpense(null); setTimeout(() => openEdit(detailExpense), 80); }}
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="edit-2" size={13} color="#64748B" />
+                      <Text style={s.detailEditTxt}>編集</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* サービス名 + 金額 */}
+                  <View style={s.detailHead}>
+                    {hasServiceIcon(detailExpense.name)
+                      ? <ServiceIcon name={detailExpense.name} size={52} />
+                      : <View style={[s.detailIcon, { backgroundColor: color + '20' }]}>
+                          <Ionicons name={icon as never} size={26} color={color} />
+                        </View>
+                    }
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.detailName}>{detailExpense.name}</Text>
+                      <View style={s.detailAmountRow}>
+                        <Text style={s.detailAmount}>{yen(detailExpense.amount)}</Text>
+                        {cycleLabel ? <Text style={s.detailAmountPer}>{cycleLabel}</Text> : null}
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={s.detailDivider} />
+
+                  {/* 情報行 */}
+                  <View style={s.detailRows}>
+                    <View style={s.detailRow}>
+                      <Text style={s.detailRowLabel}>次の支払日</Text>
+                      <View style={s.detailRowValueWrap}>
+                        <Text style={[s.detailRowValue, overdue && s.textRed, soon && !overdue && s.textOrange]}>
+                          {fmtDate(detailExpense.nextDate)}
+                        </Text>
+                        {overdue
+                          ? <Text style={[s.detailBadge, s.detailBadgeRed]}>{Math.abs(days)}日超過</Text>
+                          : days === 0
+                            ? <Text style={[s.detailBadge, s.detailBadgeOrange]}>今日</Text>
+                            : days <= 7
+                              ? <Text style={[s.detailBadge, s.detailBadgeOrange]}>あと{days}日</Text>
+                              : null
+                        }
+                      </View>
+                    </View>
+
+                    {detailExpense.cycle !== 'irregular' && (
+                      <View style={s.detailRow}>
+                        <Text style={s.detailRowLabel}>月額換算</Text>
+                        <Text style={s.detailRowValue}>{yen(Math.round(monthly))}/月</Text>
+                      </View>
+                    )}
+
+                    <View style={s.detailRow}>
+                      <Text style={s.detailRowLabel}>カテゴリ</Text>
+                      <View style={[s.detailCatBadge, { backgroundColor: color + '20' }]}>
+                        <Text style={[s.detailCatTxt, { color }]}>{CAT[detailExpense.category].label}</Text>
+                      </View>
+                    </View>
+
+                    {detailExpense.memo ? (
+                      <View style={s.detailRow}>
+                        <Text style={s.detailRowLabel}>メモ</Text>
+                        <Text style={[s.detailRowValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>{detailExpense.memo}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {billingUrl && (
+                    <>
+                      <View style={s.detailDivider} />
+                      <TouchableOpacity
+                        style={s.detailBillingBtn}
+                        onPress={() => Linking.openURL(billingUrl)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="open-outline" size={14} color="#475569" />
+                        <Text style={s.detailBillingTxt}>支払日を確認する</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+
+                  <View style={s.detailDivider} />
+                  <TouchableOpacity
+                    style={s.detailDeleteBtn}
+                    onPress={() => { setDetailExpense(null); setTimeout(() => handleDelete(detailExpense.id), 80); }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={15} color="#FC5A5A" />
+                    <Text style={s.detailDeleteTxt}>削除</Text>
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <TouchableOpacity
         style={[s.fab, { bottom: insets.bottom + 24 }]}
@@ -1870,6 +1987,35 @@ const s = StyleSheet.create({
   editIconBtn:       { padding: 2 },
   textRed:           { color: '#FC5A5A' },
   textOrange:        { color: '#FF8C42' },
+
+  // 詳細シート
+  detailOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  detailSheet:        { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10 },
+  detailHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 4 },
+  detailTopRow:       { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
+  detailEditBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#F1F5F9' },
+  detailEditTxt:      { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  detailHead:         { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
+  detailIcon:         { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  detailName:         { fontSize: 17, fontWeight: '800', color: '#1A202C', marginBottom: 4 },
+  detailAmountRow:    { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
+  detailAmount:       { fontSize: 24, fontWeight: '800', color: '#1A202C' },
+  detailAmountPer:    { fontSize: 14, color: '#94A3B8', fontWeight: '500' },
+  detailDivider:      { height: 1, backgroundColor: '#F1F5F9', marginVertical: 14 },
+  detailRows:         { gap: 12 },
+  detailRow:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  detailRowLabel:     { fontSize: 13, color: '#94A3B8', fontWeight: '500' },
+  detailRowValueWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailRowValue:     { fontSize: 14, fontWeight: '600', color: '#1A202C' },
+  detailBadge:        { fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  detailBadgeRed:     { backgroundColor: '#FFF5F5', color: '#FC5A5A' },
+  detailBadgeOrange:  { backgroundColor: '#FFFAF0', color: '#FF8C42' },
+  detailCatBadge:     { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  detailCatTxt:       { fontSize: 12, fontWeight: '700' },
+  detailBillingBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: '#F8FAFC' },
+  detailBillingTxt:   { fontSize: 14, fontWeight: '600', color: '#475569' },
+  detailDeleteBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
+  detailDeleteTxt:    { fontSize: 14, fontWeight: '600', color: '#FC5A5A' },
   empty:             { alignItems: 'center', paddingVertical: 60, gap: 10 },
   emptyTitle:        { fontSize: 16, fontWeight: '600', color: '#CBD5E0' },
   emptySub:          { fontSize: 13, color: '#CBD5E0' },
