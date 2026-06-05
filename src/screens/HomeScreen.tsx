@@ -1831,6 +1831,42 @@ export default function HomeScreen() {
   const [form, setForm]     = useState<FormState>(blankForm());
   const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name' | 'manual'>('date');
   const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
+  const detailSheetY  = useRef(new Animated.Value(SCREEN_H)).current;
+  const detailScrollY = useRef(0);
+
+  const openDetailSheet = (exp: Expense) => {
+    detailScrollY.current = 0;
+    detailSheetY.stopAnimation();
+    setDetailExpense(exp);
+    detailSheetY.setValue(SCREEN_H);
+    Animated.timing(detailSheetY, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+  };
+
+  const closeDetailSheet = (then?: () => void) => {
+    Animated.timing(detailSheetY, { toValue: SCREEN_H, duration: 260, useNativeDriver: true })
+      .start(() => { setDetailExpense(null); then?.(); });
+  };
+
+  const detailDragPan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onStartShouldSetPanResponderCapture: () => false,
+    onMoveShouldSetPanResponder: (_, g) => detailScrollY.current <= 0 && g.dy > 8,
+    onPanResponderMove: (_, g) => {
+      if (g.dy > 0) detailSheetY.setValue(g.dy);
+    },
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 80 || g.vy > 0.5) {
+        Animated.timing(detailSheetY, { toValue: SCREEN_H, duration: 250, useNativeDriver: true })
+          .start(() => setDetailExpense(null));
+      } else {
+        Animated.spring(detailSheetY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+      }
+    },
+    onPanResponderTerminate: () => {
+      Animated.spring(detailSheetY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+    },
+  })).current;
+
   const [filterCat, setFilterCat] = useState<string>('all');
   const [filterTiming, setFilterTiming] = useState<'all' | 'soon' | 'overdue'>('all');
   const [filterVisible, setFilterVisible] = useState(false);
@@ -2109,7 +2145,7 @@ export default function HomeScreen() {
                     expense={exp}
                     onEdit={() => openEdit(exp)}
                     onDelete={() => handleDelete(exp.id)}
-                    onCardTap={() => setDetailExpense(exp)}
+                    onCardTap={() => openDetailSheet(exp)}
                     reorderMode={cardReorderMode}
                     onLayout={(e) => { cardHeightsRef.current[index] = e.nativeEvent.layout.height; }}
                   />
@@ -2137,148 +2173,155 @@ export default function HomeScreen() {
       <Modal
         visible={!!detailExpense}
         transparent
-        animationType="slide"
-        onRequestClose={() => setDetailExpense(null)}
+        animationType="none"
+        onRequestClose={() => closeDetailSheet()}
       >
-        <Pressable style={s.detailOverlay} onPress={() => setDetailExpense(null)}>
-          <Pressable style={[s.detailSheet, { maxHeight: SCREEN_H * 0.88 }]} onPress={() => {}}>
-            <View style={s.detailHandle} />
-            {detailExpense && (() => {
-              const { color, icon } = CAT[detailExpense.category];
-              const days   = daysUntil(detailExpense.nextDate);
-              const overdue = days < 0;
-              const soon    = days >= 0 && days <= 7;
-              const monthly = monthlyEq(detailExpense.amount, detailExpense.cycle, detailExpense.customCycleDays);
-              const cycleLabel = detailExpense.cycle === 'monthly' ? '/月'
-                               : detailExpense.cycle === 'yearly'  ? '/年'
-                               : detailExpense.cycle === 'custom'  ? `/${detailExpense.customCycleDays}日`
-                               : '';
-              return (
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }}
-                >
-                  <>
-                  {/* ヘッダー: 編集ボタン右上 */}
-                  <View style={s.detailTopRow}>
-                    <View style={{ flex: 1 }} />
-                    <TouchableOpacity
-                      style={s.detailEditBtn}
-                      onPress={() => { setDetailExpense(null); setTimeout(() => openEdit(detailExpense), 80); }}
-                      activeOpacity={0.7}
-                    >
-                      <Feather name="edit-2" size={13} color="#64748B" />
-                      <Text style={s.detailEditTxt}>編集</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* サービス名 + 金額 */}
-                  <View style={s.detailHead}>
-                    {hasServiceIcon(detailExpense.name)
-                      ? <ServiceIcon name={detailExpense.name} size={52} />
-                      : <View style={[s.detailIcon, { backgroundColor: color + '20' }]}>
-                          <Ionicons name={icon as never} size={26} color={color} />
-                        </View>
-                    }
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.detailName}>{detailExpense.name}</Text>
-                      <View style={s.detailAmountRow}>
-                        <Text style={s.detailAmount}>{yen(detailExpense.amount)}</Text>
-                        {cycleLabel ? <Text style={s.detailAmountPer}>{cycleLabel}</Text> : null}
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={s.detailDivider} />
-
-                  {/* 情報行 */}
-                  <View style={s.detailRows}>
-                    <View style={s.detailRow}>
-                      <Text style={s.detailRowLabel}>次の支払日</Text>
-                      <View style={s.detailRowValueWrap}>
-                        <Text style={[s.detailRowValue, overdue && s.textRed, soon && !overdue && s.textOrange]}>
-                          {fmtDate(detailExpense.nextDate)}
-                        </Text>
-                        {overdue
-                          ? <Text style={[s.detailBadge, s.detailBadgeRed]}>{Math.abs(days)}日超過</Text>
-                          : days === 0
-                            ? <Text style={[s.detailBadge, s.detailBadgeOrange]}>今日</Text>
-                            : days <= 7
-                              ? <Text style={[s.detailBadge, s.detailBadgeOrange]}>あと{days}日</Text>
-                              : null
-                        }
-                      </View>
-                    </View>
-
-                    {detailExpense.cycle !== 'irregular' && (
-                      <View style={s.detailRow}>
-                        <Text style={s.detailRowLabel}>月額換算</Text>
-                        <Text style={s.detailRowValue}>{yen(Math.round(monthly))}/月</Text>
-                      </View>
-                    )}
-
-                    <View style={s.detailRow}>
-                      <Text style={s.detailRowLabel}>カテゴリ</Text>
-                      <View style={[s.detailCatBadge, { backgroundColor: color + '20' }]}>
-                        <Text style={[s.detailCatTxt, { color }]}>
-                          {detailExpense.category === 'custom' && detailExpense.customCategoryLabel
-                            ? detailExpense.customCategoryLabel
-                            : CAT[detailExpense.category].label}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {detailExpense.memo ? (
-                      <View style={s.detailRow}>
-                        <Text style={s.detailRowLabel}>メモ</Text>
-                        <Text style={[s.detailRowValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>{detailExpense.memo}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {detailExpense.category === 'subscription' && (() => {
-                    const cancelUrl = getCancelUrl(detailExpense.name)
-                      ?? `https://www.google.com/search?q=${encodeURIComponent(detailExpense.name + ' 退会方法')}`;
-                    const steps = getCancelSteps(detailExpense.name);
-                    return (
-                      <>
-                        <View style={s.detailDivider} />
-                        <TouchableOpacity
-                          style={s.detailCancelSiteBtn}
-                          onPress={() => Linking.openURL(cancelUrl)}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="globe-outline" size={15} color="#fff" />
-                          <Text style={s.detailCancelSiteTxt}>公式サイトを開く</Text>
-                          <Ionicons name="open-outline" size={13} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={s.detailStepsLabel}>退会手順</Text>
-                        {steps.map((step, i) => (
-                          <View key={i} style={s.detailStepRow}>
-                            <View style={s.detailStepNum}>
-                              <Text style={s.detailStepNumTxt}>{i + 1}</Text>
-                            </View>
-                            <Text style={s.detailStepTxt}>{step}</Text>
-                          </View>
-                        ))}
-                      </>
-                    );
-                  })()}
-
-                  <View style={s.detailDivider} />
-                  <TouchableOpacity
-                    style={s.detailDeleteBtn}
-                    onPress={() => { setDetailExpense(null); setTimeout(() => handleDelete(detailExpense.id), 80); }}
-                    activeOpacity={0.8}
+        <Pressable style={s.detailOverlay} onPress={() => closeDetailSheet()}>
+          <Animated.View
+            style={{ transform: [{ translateY: detailSheetY }] }}
+            {...detailDragPan.panHandlers}
+          >
+            <Pressable style={[s.detailSheet, { maxHeight: SCREEN_H * 0.88 }]} onPress={() => {}}>
+              <View style={s.detailHandle} />
+              {detailExpense && (() => {
+                const { color, icon } = CAT[detailExpense.category];
+                const days   = daysUntil(detailExpense.nextDate);
+                const overdue = days < 0;
+                const soon    = days >= 0 && days <= 7;
+                const monthly = monthlyEq(detailExpense.amount, detailExpense.cycle, detailExpense.customCycleDays);
+                const cycleLabel = detailExpense.cycle === 'monthly' ? '/月'
+                                 : detailExpense.cycle === 'yearly'  ? '/年'
+                                 : detailExpense.cycle === 'custom'  ? `/${detailExpense.customCycleDays}日`
+                                 : '';
+                return (
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }}
+                    onScroll={e => { detailScrollY.current = e.nativeEvent.contentOffset.y; }}
+                    scrollEventThrottle={16}
                   >
-                    <Ionicons name="trash-outline" size={15} color="#FC5A5A" />
-                    <Text style={s.detailDeleteTxt}>削除</Text>
-                  </TouchableOpacity>
-                </>
-                </ScrollView>
-              );
-            })()}
-          </Pressable>
+                    <>
+                    {/* ヘッダー: 編集ボタン右上 */}
+                    <View style={s.detailTopRow}>
+                      <View style={{ flex: 1 }} />
+                      <TouchableOpacity
+                        style={s.detailEditBtn}
+                        onPress={() => { const exp = detailExpense; closeDetailSheet(() => openEdit(exp)); }}
+                        activeOpacity={0.7}
+                      >
+                        <Feather name="edit-2" size={13} color="#64748B" />
+                        <Text style={s.detailEditTxt}>編集</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* サービス名 + 金額 */}
+                    <View style={s.detailHead}>
+                      {hasServiceIcon(detailExpense.name)
+                        ? <ServiceIcon name={detailExpense.name} size={52} />
+                        : <View style={[s.detailIcon, { backgroundColor: color + '20' }]}>
+                            <Ionicons name={icon as never} size={26} color={color} />
+                          </View>
+                      }
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.detailName}>{detailExpense.name}</Text>
+                        <View style={s.detailAmountRow}>
+                          <Text style={s.detailAmount}>{yen(detailExpense.amount)}</Text>
+                          {cycleLabel ? <Text style={s.detailAmountPer}>{cycleLabel}</Text> : null}
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={s.detailDivider} />
+
+                    {/* 情報行 */}
+                    <View style={s.detailRows}>
+                      <View style={s.detailRow}>
+                        <Text style={s.detailRowLabel}>次の支払日</Text>
+                        <View style={s.detailRowValueWrap}>
+                          <Text style={[s.detailRowValue, overdue && s.textRed, soon && !overdue && s.textOrange]}>
+                            {fmtDate(detailExpense.nextDate)}
+                          </Text>
+                          {overdue
+                            ? <Text style={[s.detailBadge, s.detailBadgeRed]}>{Math.abs(days)}日超過</Text>
+                            : days === 0
+                              ? <Text style={[s.detailBadge, s.detailBadgeOrange]}>今日</Text>
+                              : days <= 7
+                                ? <Text style={[s.detailBadge, s.detailBadgeOrange]}>あと{days}日</Text>
+                                : null
+                          }
+                        </View>
+                      </View>
+
+                      {detailExpense.cycle !== 'irregular' && (
+                        <View style={s.detailRow}>
+                          <Text style={s.detailRowLabel}>月額換算</Text>
+                          <Text style={s.detailRowValue}>{yen(Math.round(monthly))}/月</Text>
+                        </View>
+                      )}
+
+                      <View style={s.detailRow}>
+                        <Text style={s.detailRowLabel}>カテゴリ</Text>
+                        <View style={[s.detailCatBadge, { backgroundColor: color + '20' }]}>
+                          <Text style={[s.detailCatTxt, { color }]}>
+                            {detailExpense.category === 'custom' && detailExpense.customCategoryLabel
+                              ? detailExpense.customCategoryLabel
+                              : CAT[detailExpense.category].label}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {detailExpense.memo ? (
+                        <View style={s.detailRow}>
+                          <Text style={s.detailRowLabel}>メモ</Text>
+                          <Text style={[s.detailRowValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>{detailExpense.memo}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {detailExpense.category === 'subscription' && (() => {
+                      const cancelUrl = getCancelUrl(detailExpense.name)
+                        ?? `https://www.google.com/search?q=${encodeURIComponent(detailExpense.name + ' 退会方法')}`;
+                      const steps = getCancelSteps(detailExpense.name);
+                      return (
+                        <>
+                          <View style={s.detailDivider} />
+                          <TouchableOpacity
+                            style={s.detailCancelSiteBtn}
+                            onPress={() => Linking.openURL(cancelUrl)}
+                            activeOpacity={0.8}
+                          >
+                            <Ionicons name="globe-outline" size={15} color="#fff" />
+                            <Text style={s.detailCancelSiteTxt}>公式サイトを開く</Text>
+                            <Ionicons name="open-outline" size={13} color="#fff" />
+                          </TouchableOpacity>
+                          <Text style={s.detailStepsLabel}>退会手順</Text>
+                          {steps.map((step, i) => (
+                            <View key={i} style={s.detailStepRow}>
+                              <View style={s.detailStepNum}>
+                                <Text style={s.detailStepNumTxt}>{i + 1}</Text>
+                              </View>
+                              <Text style={s.detailStepTxt}>{step}</Text>
+                            </View>
+                          ))}
+                        </>
+                      );
+                    })()}
+
+                    <View style={s.detailDivider} />
+                    <TouchableOpacity
+                      style={s.detailDeleteBtn}
+                      onPress={() => { const id = detailExpense.id; closeDetailSheet(() => handleDelete(id)); }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#FC5A5A" />
+                      <Text style={s.detailDeleteTxt}>削除</Text>
+                    </TouchableOpacity>
+                    </>
+                  </ScrollView>
+                );
+              })()}
+            </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
 
