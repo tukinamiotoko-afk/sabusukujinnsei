@@ -1582,7 +1582,7 @@ export default function HomeScreen() {
   const [form, setForm]     = useState<FormState>(blankForm());
   const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name'>('date');
   const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
-  const [filterCat, setFilterCat] = useState<Category | 'all'>('all');
+  const [filterCat, setFilterCat] = useState<'all' | 'subscription' | 'fixed'>('all');
   const [filterTiming, setFilterTiming] = useState<'all' | 'soon' | 'overdue'>('all');
   const [filterVisible, setFilterVisible] = useState(false);
 
@@ -1642,7 +1642,8 @@ export default function HomeScreen() {
 
   const activeFilterCount = (filterCat !== 'all' ? 1 : 0) + (filterTiming !== 'all' ? 1 : 0);
   const displayed = sorted.filter(exp => {
-    if (filterCat !== 'all' && exp.category !== filterCat) return false;
+    if (filterCat === 'subscription' && exp.category !== 'subscription') return false;
+    if (filterCat === 'fixed' && exp.category === 'subscription') return false;
     const d = daysUntil(exp.nextDate);
     if (filterTiming === 'soon') return d >= 0 && d <= 7;
     if (filterTiming === 'overdue') return d < 0;
@@ -1971,8 +1972,8 @@ export default function HomeScreen() {
             </View>
 
             <Text style={s.filterSectionLabel}>カテゴリ</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
-              {([['all','すべて'],['subscription','サブスク'],['housing','住居費'],['insurance','保険'],['telecom','通信費'],['loan','ローン'],['transport','交通定期'],['lesson','習い事'],['delivery','定期購入'],['membership','会費'],['social','社会保険'],['other','その他']] as [Category|'all',string][]).map(([val, label]) => (
+            <View style={s.filterChipRow}>
+              {([['all','すべて'],['subscription','サブスク'],['fixed','固定費']] as ['all'|'subscription'|'fixed',string][]).map(([val, label]) => (
                 <TouchableOpacity
                   key={val}
                   style={[s.filterChip, filterCat === val && s.filterChipSel]}
@@ -1982,7 +1983,7 @@ export default function HomeScreen() {
                   <Text style={[s.filterChipTxt, filterCat === val && s.filterChipTxtSel]}>{label}</Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
 
             <Text style={s.filterSectionLabel}>支払いタイミング</Text>
             <View style={s.filterChipRow}>
