@@ -17,7 +17,9 @@ import {
   Linking,
   PanResponder,
   BackHandler,
+  LayoutChangeEvent,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -88,8 +90,9 @@ const blankForm = (): FormState => ({
 
 // ─── ExpenseCard ─────────────────────────────────────────────────────────────
 
-function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
+function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayout }: {
   expense: Expense; onEdit: () => void; onDelete: () => void; onCardTap: () => void;
+  reorderMode?: boolean; onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const { customCategories } = useCustomCategories();
   const isCustom = expense.category === 'custom';
@@ -100,6 +103,8 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
   const overdue = days < 0;
   const soon    = days >= 0 && days <= 7;
   const isSubscription = expense.category === 'subscription';
+  const reorderModeRef = useRef(false);
+  reorderModeRef.current = reorderMode ?? false;
 
   const translateX = useRef(new Animated.Value(0)).current;
   const openDir    = useRef<'none' | 'left' | 'right'>('none');
@@ -115,7 +120,7 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
 
   const panResponder = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) =>
-      Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && Math.abs(g.dx) > 10,
+      !reorderModeRef.current && Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && Math.abs(g.dx) > 10,
     onPanResponderMove: (_, g) => {
       const base = openDir.current === 'right' ? SWIPE_ACTION_W
                  : openDir.current === 'left'  ? -SWIPE_ACTION_W : 0;
@@ -152,24 +157,23 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
   const handleCancelPage = () => { close(); setTimeout(openCancelUrl, 220); };
 
   return (
-    <View style={s.swipeWrap}>
-      {/* 背景アクション: 削除（左側、右スワイプで出現） */}
-      <TouchableOpacity style={s.swipeDeleteAction} onPress={handleDelete} activeOpacity={0.85}>
-        <Ionicons name="trash-outline" size={22} color="#fff" />
-        <Text style={s.swipeActionText}>削除しますか</Text>
-      </TouchableOpacity>
-
-      {/* 背景アクション: 退会（右側、左スワイプで出現・サブスクのみ） */}
-      {isSubscription && (
-        <TouchableOpacity style={s.swipeCancelAction} onPress={handleCancelPage} activeOpacity={0.85}>
-          <Ionicons name="log-out-outline" size={22} color="#fff" />
-          <Text style={s.swipeActionText}>退会しますか</Text>
-        </TouchableOpacity>
+    <View style={s.swipeWrap} onLayout={onLayout}>
+      {!reorderMode && (
+        <>
+          <TouchableOpacity style={s.swipeDeleteAction} onPress={handleDelete} activeOpacity={0.85}>
+            <Ionicons name="trash-outline" size={22} color="#fff" />
+            <Text style={s.swipeActionText}>削除しますか</Text>
+          </TouchableOpacity>
+          {isSubscription && (
+            <TouchableOpacity style={s.swipeCancelAction} onPress={handleCancelPage} activeOpacity={0.85}>
+              <Ionicons name="log-out-outline" size={22} color="#fff" />
+              <Text style={s.swipeActionText}>退会しますか</Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
-
-      {/* スライドするカード */}
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
-        <TouchableOpacity style={s.card} onPress={handleCardPress} activeOpacity={0.75}>
+      <Animated.View style={{ transform: [{ translateX: reorderMode ? new Animated.Value(0) : translateX }] }} {...(!reorderMode ? panResponder.panHandlers : {})}>
+        <TouchableOpacity style={s.card} onPress={reorderMode ? undefined : handleCardPress} activeOpacity={reorderMode ? 1 : 0.75}>
           {hasServiceIcon(expense.name)
             ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
             : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
@@ -184,10 +188,16 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
               {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
             </Text>
           </View>
-          <View style={s.cardRight}>
-            <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
-            <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
-          </View>
+          {reorderMode ? (
+            <View style={{ paddingLeft: 12, paddingRight: 4 }}>
+              <Ionicons name="reorder-three-outline" size={26} color="#94A3B8" />
+            </View>
+          ) : (
+            <View style={s.cardRight}>
+              <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
+            </View>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -701,7 +711,7 @@ function ExpenseModal({
   const [reorderMode, setReorderMode] = useState(false);
   const [rDragIdx, setRDragIdx] = useState<number | null>(null);
   const [rDropIdx, setRDropIdx] = useState<number | null>(null);
-  const rDragRef      = useRef<{ dragIdx: number; startPageY: number } | null>(null);
+  const rDragRef      = useRef<{ dragIdx: number; startPageY: number; startY: number } | null>(null);
   const rDropRef      = useRef<number | null>(null);
   const reorderModeRef = useRef(false);
   reorderModeRef.current = reorderMode;
@@ -709,21 +719,26 @@ function ExpenseModal({
   catOrderLenRef.current = categoryOrder.length;
   const reorderCatsRef = useRef(reorderCats);
   reorderCatsRef.current = reorderCats;
+  const catDragAnimY = useRef(new Animated.Value(0)).current;
 
   const reorderPan = useRef(PanResponder.create({
     onStartShouldSetPanResponder:        () => reorderModeRef.current,
     onStartShouldSetPanResponderCapture: () => reorderModeRef.current,
     onPanResponderGrant: (e) => {
       const idx = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.floor(e.nativeEvent.locationY / CAT_ROW_H)));
-      rDragRef.current = { dragIdx: idx, startPageY: e.nativeEvent.pageY };
+      const startY = idx * CAT_ROW_H;
+      catDragAnimY.setValue(startY);
+      rDragRef.current = { dragIdx: idx, startPageY: e.nativeEvent.pageY, startY };
       rDropRef.current = idx;
       setRDragIdx(idx); setRDropIdx(idx);
     },
     onPanResponderMove: (e) => {
       if (!rDragRef.current) return;
-      const { dragIdx, startPageY } = rDragRef.current;
+      const { startY, startPageY } = rDragRef.current;
       const dy = e.nativeEvent.pageY - startPageY;
-      const next = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.round((dragIdx * CAT_ROW_H + dy) / CAT_ROW_H)));
+      const currentY = startY + dy;
+      catDragAnimY.setValue(Math.max(0, Math.min((catOrderLenRef.current - 1) * CAT_ROW_H, currentY)));
+      const next = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.round(currentY / CAT_ROW_H)));
       if (next !== rDropRef.current) { rDropRef.current = next; setRDropIdx(next); }
     },
     onPanResponderRelease: () => {
@@ -1157,28 +1172,39 @@ function ExpenseModal({
               </View>
             )}
 
-            {/* 全カテゴリ統合リスト（並び替えモード時はPanResponderが管理） */}
-            <ScrollView keyboardShouldPersistTaps="handled" scrollEnabled={!reorderMode}>
-              <View {...reorderPan.panHandlers}>
+            {/* 全カテゴリ統合リスト */}
+            {reorderMode ? (
+              <View
+                {...reorderPan.panHandlers}
+                style={{ flex: 1, overflow: 'hidden', position: 'relative' }}
+              >
                 {categoryOrder.map((id, index) => {
+                  const isDragging = rDragIdx === index;
+                  let shiftY = 0;
+                  if (rDragIdx !== null && rDropIdx !== null && rDragIdx !== rDropIdx) {
+                    if (rDragIdx < rDropIdx && index > rDragIdx && index <= rDropIdx) shiftY = -CAT_ROW_H;
+                    else if (rDragIdx > rDropIdx && index >= rDropIdx && index < rDragIdx) shiftY = CAT_ROW_H;
+                  }
+                  return (
+                    <View key={id} style={[{ height: CAT_ROW_H, transform: [{ translateY: shiftY }] }, isDragging && { opacity: 0 }]}>
+                      <UnifiedCatRow id={id} customCategories={customCategories} isSelected={false} reorderMode isDragging={false} isDropTarget={false} />
+                    </View>
+                  );
+                })}
+                {rDragIdx !== null && rDragIdx < categoryOrder.length && (
+                  <Animated.View style={[s.catRowFloating, { top: catDragAnimY }]}>
+                    <UnifiedCatRow id={categoryOrder[rDragIdx]} customCategories={customCategories} isSelected={false} reorderMode isDragging isDropTarget={false} />
+                  </Animated.View>
+                )}
+              </View>
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled">
+                {categoryOrder.map((id) => {
                   const custom = customCategories.find(c => c.id === id);
                   const isBuiltin = !custom && CATEGORIES.includes(id as never) && id !== 'custom';
                   const isSelected = custom
                     ? form.category === 'custom' && form.customCategoryLabel === custom.label
                     : form.category === id;
-                  if (reorderMode) {
-                    return (
-                      <UnifiedCatRow
-                        key={id}
-                        id={id}
-                        customCategories={customCategories}
-                        isSelected={isSelected}
-                        reorderMode
-                        isDragging={rDragIdx === index}
-                        isDropTarget={rDropIdx === index && rDropIdx !== rDragIdx}
-                      />
-                    );
-                  }
                   const color = custom ? custom.color : (isBuiltin ? CAT[id as Category]?.color : '#A0AEC0') ?? '#A0AEC0';
                   const icon  = custom ? 'bookmark-outline' : (isBuiltin ? CAT[id as Category]?.icon : 'apps-outline') ?? 'apps-outline';
                   const label = custom ? custom.label : (isBuiltin ? CAT[id as Category]?.label : id) ?? id;
@@ -1201,8 +1227,8 @@ function ExpenseModal({
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-            </ScrollView>
+              </ScrollView>
+            )}
           </Animated.View>
         )}
 
@@ -1714,17 +1740,99 @@ function ExpenseModal({
 
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 
+const CARD_ITEM_H = 82; // カード高さ(74px) + gap(8px)
+const EXPENSE_ORDER_KEY = '@expense_order_v1';
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, setExpenses } = useExpenses();
   const { isPro, openPaywall } = usePro();
   const { customCategories, categoryOrder } = useCustomCategories();
+
+  // 手動並び替え順序
+  const [expenseOrder, setExpenseOrderState] = useState<string[]>([]);
+  const setExpenseOrder = useCallback((order: string[]) => {
+    setExpenseOrderState(order);
+    AsyncStorage.setItem(EXPENSE_ORDER_KEY, JSON.stringify(order));
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.getItem(EXPENSE_ORDER_KEY).then(json => {
+      if (json) setExpenseOrderState(JSON.parse(json));
+    });
+  }, []);
+
+  // expenses の追加・削除に合わせて order を同期
+  useEffect(() => {
+    setExpenseOrderState(prev => {
+      const ids = expenses.map(e => e.id);
+      const valid = prev.filter(id => ids.includes(id));
+      const added = ids.filter(id => !valid.includes(id));
+      return [...added, ...valid];
+    });
+  }, [expenses.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // カード並び替えモード
+  const [cardReorderMode, setCardReorderMode] = useState(false);
+  const [cDragIdx, setCDragIdx] = useState<number | null>(null);
+  const [cDropIdx, setCDropIdx] = useState<number | null>(null);
+  const cDragRef  = useRef<{ dragIdx: number; startPageY: number; startY: number } | null>(null);
+  const cDropRef  = useRef<number | null>(null);
+  const cardReorderModeRef = useRef(false);
+  cardReorderModeRef.current = cardReorderMode;
+  const cDragAnimY = useRef(new Animated.Value(0)).current;
+  const displayedLenRef = useRef(0);
+  const expenseOrderRef = useRef(expenseOrder);
+  expenseOrderRef.current = expenseOrder;
+  const setExpenseOrderRef = useRef(setExpenseOrder);
+  setExpenseOrderRef.current = setExpenseOrder;
+  const cardHeightsRef = useRef<number[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const cardReorderPan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder:        () => cardReorderModeRef.current,
+    onStartShouldSetPanResponderCapture: () => cardReorderModeRef.current,
+    onPanResponderGrant: (e) => {
+      const y = e.nativeEvent.locationY;
+      const idx = Math.max(0, Math.min(displayedLenRef.current - 1, Math.floor(y / CARD_ITEM_H)));
+      const startY = idx * CARD_ITEM_H;
+      cDragAnimY.setValue(startY);
+      cDragRef.current = { dragIdx: idx, startPageY: e.nativeEvent.pageY, startY };
+      cDropRef.current = idx;
+      setCDragIdx(idx); setCDropIdx(idx);
+    },
+    onPanResponderMove: (e) => {
+      if (!cDragRef.current) return;
+      const { startY, startPageY } = cDragRef.current;
+      const dy = e.nativeEvent.pageY - startPageY;
+      const currentY = startY + dy;
+      cDragAnimY.setValue(Math.max(0, Math.min((displayedLenRef.current - 1) * CARD_ITEM_H, currentY)));
+      const next = Math.max(0, Math.min(displayedLenRef.current - 1, Math.round(currentY / CARD_ITEM_H)));
+      if (next !== cDropRef.current) { cDropRef.current = next; setCDropIdx(next); }
+    },
+    onPanResponderRelease: () => {
+      if (cDragRef.current && cDropRef.current !== null && cDragRef.current.dragIdx !== cDropRef.current) {
+        const from = cDragRef.current.dragIdx;
+        const to   = cDropRef.current;
+        const newOrder = [...expenseOrderRef.current];
+        const [moved] = newOrder.splice(from, 1);
+        newOrder.splice(to, 0, moved);
+        setExpenseOrderRef.current(newOrder);
+      }
+      cDragRef.current = null; cDropRef.current = null;
+      setCDragIdx(null); setCDropIdx(null);
+    },
+    onPanResponderTerminate: () => {
+      cDragRef.current = null; cDropRef.current = null;
+      setCDragIdx(null); setCDropIdx(null);
+    },
+  })).current;
   const [adVisible, setAdVisible] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<FormState>(blankForm());
-  const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name'>('date');
+  const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name' | 'manual'>('date');
   const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
   const [filterCat, setFilterCat] = useState<string>('all');
   const [filterTiming, setFilterTiming] = useState<'all' | 'soon' | 'overdue'>('all');
@@ -1777,12 +1885,18 @@ export default function HomeScreen() {
     }).start();
   }, [monthlyTotal]);
 
-  const sorted = [...expenses].sort((a, b) => {
-    if (sortKey === 'amountDesc') return monthlyEq(b.amount, b.cycle, b.customCycleDays) - monthlyEq(a.amount, a.cycle, a.customCycleDays);
-    if (sortKey === 'amountAsc')  return monthlyEq(a.amount, a.cycle, a.customCycleDays) - monthlyEq(b.amount, b.cycle, b.customCycleDays);
-    if (sortKey === 'name')       return a.name.localeCompare(b.name, 'ja');
-    return new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime();
-  });
+  const sorted = useMemo(() => {
+    if (sortKey === 'manual') {
+      const orderMap = new Map(expenseOrder.map((id, i) => [id, i]));
+      return [...expenses].sort((a, b) => (orderMap.get(a.id) ?? Infinity) - (orderMap.get(b.id) ?? Infinity));
+    }
+    return [...expenses].sort((a, b) => {
+      if (sortKey === 'amountDesc') return monthlyEq(b.amount, b.cycle, b.customCycleDays) - monthlyEq(a.amount, a.cycle, a.customCycleDays);
+      if (sortKey === 'amountAsc')  return monthlyEq(a.amount, a.cycle, a.customCycleDays) - monthlyEq(b.amount, b.cycle, b.customCycleDays);
+      if (sortKey === 'name')       return a.name.localeCompare(b.name, 'ja');
+      return new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime();
+    });
+  }, [expenses, sortKey, expenseOrder]);
 
   const activeFilterCount = (filterCat !== 'all' ? 1 : 0) + (filterTiming !== 'all' ? 1 : 0);
   const displayed = sorted.filter(exp => {
@@ -1800,6 +1914,7 @@ export default function HomeScreen() {
     if (filterTiming === 'overdue') return d < 0;
     return true;
   });
+  displayedLenRef.current = displayed.length;
 
   const openAdd = () => {
     if (!isPro && expenses.length >= FREE_LIMIT) { openPaywall(); return; }
@@ -1918,44 +2033,112 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <View style={s.sortBtns}>
           {(['date','amountDesc','amountAsc','name'] as const).map(k => (
-            <TouchableOpacity key={k} style={[s.sortBtn, sortKey === k && s.sortBtnActive]} onPress={() => setSortKey(k)}>
+            <TouchableOpacity
+              key={k}
+              style={[s.sortBtn, sortKey === k && s.sortBtnActive]}
+              onPress={() => { setSortKey(k); setCardReorderMode(false); }}
+            >
               <Text style={[s.sortBtnTxt, sortKey === k && s.sortBtnTxtActive]}>
                 {k === 'date' ? '日付' : k === 'amountDesc' ? '金額↓' : k === 'amountAsc' ? '金額↑' : '名前'}
               </Text>
             </TouchableOpacity>
           ))}
+          {cardReorderMode ? (
+            <TouchableOpacity
+              style={[s.sortBtn, s.sortBtnActive]}
+              onPress={() => setCardReorderMode(false)}
+            >
+              <Text style={[s.sortBtnTxt, s.sortBtnTxtActive]}>完了</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[s.sortBtn, sortKey === 'manual' && s.sortBtnActive]}
+              onPress={() => {
+                setSortKey('manual');
+                setFilterCat('all');
+                setFilterTiming('all');
+                setCardReorderMode(true);
+                setTimeout(() => scrollViewRef.current?.scrollTo({ y: 0, animated: false }), 50);
+              }}
+            >
+              <Text style={[s.sortBtnTxt, sortKey === 'manual' && s.sortBtnTxtActive]}>並替</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      <ScrollView
-        style={s.list}
-        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 90 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {expenses.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="receipt-outline" size={52} color="#CBD5E0" />
-            <Text style={s.emptyTitle}>登録がありません</Text>
-            <Text style={s.emptySub}>右下の ＋ ボタンから追加できます</Text>
-          </View>
-        ) : displayed.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="funnel-outline" size={52} color="#CBD5E0" />
-            <Text style={s.emptyTitle}>該当する項目がありません</Text>
-            <Text style={s.emptySub}>絞り込み条件を変えてみてください</Text>
-          </View>
-        ) : (
-          displayed.map(exp => (
-            <ExpenseCard
-              key={exp.id}
-              expense={exp}
-              onEdit={() => openEdit(exp)}
-              onDelete={() => handleDelete(exp.id)}
-              onCardTap={() => setDetailExpense(exp)}
-            />
-          ))
+      <View style={{ flex: 1, overflow: 'hidden' }}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={s.list}
+          contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 90 }]}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!cardReorderMode}
+        >
+          {expenses.length === 0 ? (
+            <View style={s.empty}>
+              <Ionicons name="receipt-outline" size={52} color="#CBD5E0" />
+              <Text style={s.emptyTitle}>登録がありません</Text>
+              <Text style={s.emptySub}>右下の ＋ ボタンから追加できます</Text>
+            </View>
+          ) : displayed.length === 0 ? (
+            <View style={s.empty}>
+              <Ionicons name="funnel-outline" size={52} color="#CBD5E0" />
+              <Text style={s.emptyTitle}>該当する項目がありません</Text>
+              <Text style={s.emptySub}>絞り込み条件を変えてみてください</Text>
+            </View>
+          ) : (
+            displayed.map((exp, index) => {
+              const isDragging = cardReorderMode && cDragIdx === index;
+              let shiftY = 0;
+              if (cardReorderMode && cDragIdx !== null && cDropIdx !== null && cDragIdx !== cDropIdx) {
+                if (cDragIdx < cDropIdx && index > cDragIdx && index <= cDropIdx) shiftY = -CARD_ITEM_H;
+                else if (cDragIdx > cDropIdx && index >= cDropIdx && index < cDragIdx) shiftY = CARD_ITEM_H;
+              }
+              return (
+                <Animated.View
+                  key={exp.id}
+                  style={[
+                    { transform: [{ translateY: shiftY }] },
+                    isDragging && { opacity: 0 },
+                  ]}
+                >
+                  <ExpenseCard
+                    expense={exp}
+                    onEdit={() => openEdit(exp)}
+                    onDelete={() => handleDelete(exp.id)}
+                    onCardTap={() => setDetailExpense(exp)}
+                    reorderMode={cardReorderMode}
+                    onLayout={(e) => { cardHeightsRef.current[index] = e.nativeEvent.layout.height; }}
+                  />
+                </Animated.View>
+              );
+            })
+          )}
+        </ScrollView>
+
+        {/* カード並び替えオーバーレイ */}
+        {cardReorderMode && (
+          <View
+            {...cardReorderPan.panHandlers}
+            style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
+            pointerEvents="box-only"
+          />
         )}
-      </ScrollView>
+
+        {/* フローティングカード（ドラッグ中） */}
+        {cardReorderMode && cDragIdx !== null && cDragIdx < displayed.length && (
+          <Animated.View style={[s.floatingCardWrap, { top: cDragAnimY }]}>
+            <ExpenseCard
+              expense={displayed[cDragIdx]}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              onCardTap={() => {}}
+              reorderMode
+            />
+          </Animated.View>
+        )}
+      </View>
 
       {/* ── 詳細シート ── */}
       <Modal
@@ -2403,6 +2586,15 @@ const s = StyleSheet.create({
   catPanelRowTextSel:   { color: '#475569', fontWeight: '700' },
   catRowDragging:       { backgroundColor: '#E2E8F0', opacity: 0.5 },
   catRowDropTarget:     { borderTopWidth: 2, borderTopColor: '#3182CE', backgroundColor: '#EBF8FF' },
+  catRowFloating: {
+    position: 'absolute', left: 0, right: 0, height: CAT_ROW_H, zIndex: 100,
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 8,
+  },
+  floatingCardWrap: {
+    position: 'absolute', left: 16, right: 16, zIndex: 100,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 10,
+  },
   catPanelDivider:      { height: 8, backgroundColor: '#F1F5F9' },
   addCatRow:            { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   addCatInput:          { flex: 1, fontSize: 15, color: '#1A202C', backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 9 },
