@@ -633,29 +633,33 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
   );
 }
 
-// ─── カスタムカテゴリ行 ───────────────────────────────────────────────────────
+// ─── カテゴリ行（統合） ───────────────────────────────────────────────────────
 
 const CAT_ROW_H = 56;
 
-function CustomCatRow({ cat, isSelected, reorderMode, isDragging, isDropTarget }: {
-  cat: CustomCategory;
+function UnifiedCatRow({ id, customCategories, isSelected, reorderMode, isDragging, isDropTarget }: {
+  id: string;
+  customCategories: CustomCategory[];
   isSelected: boolean;
   reorderMode: boolean;
   isDragging: boolean;
   isDropTarget: boolean;
 }) {
+  const custom = customCategories.find(c => c.id === id);
+  const color  = custom ? custom.color : (CAT[id as never] as { color: string })?.color ?? '#A0AEC0';
+  const icon   = custom ? 'bookmark-outline' : (CAT[id as never] as { icon: string })?.icon ?? 'apps-outline';
+  const label  = custom ? custom.label : (CAT[id as never] as { label: string })?.label ?? id;
   return (
     <View style={[
-      s.catPanelRow,
-      { height: CAT_ROW_H },
-      isSelected && !reorderMode && s.catPanelRowSelected,
+      s.catPanelRow, { height: CAT_ROW_H },
+      isSelected   && !reorderMode && s.catPanelRowSelected,
       isDragging   && s.catRowDragging,
       isDropTarget && s.catRowDropTarget,
     ]}>
-      <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
-        <Ionicons name="bookmark-outline" size={18} color={cat.color} />
+      <View style={[s.catPanelRowIcon, { backgroundColor: color + '20' }]}>
+        <Ionicons name={icon as never} size={18} color={color} />
       </View>
-      <Text style={[s.catPanelRowText, isSelected && !reorderMode && s.catPanelRowTextSel]}>{cat.label}</Text>
+      <Text style={[s.catPanelRowText, isSelected && !reorderMode && s.catPanelRowTextSel]}>{label}</Text>
       {isSelected && !reorderMode && <Ionicons name="checkmark" size={18} color="#475569" />}
       {reorderMode && <Ionicons name="reorder-three-outline" size={22} color="#94A3B8" />}
     </View>
@@ -674,7 +678,7 @@ function ExpenseModal({
 }) {
   const { isPro, openPaywall } = usePro();
   const { expenses: allExpenses } = useExpenses();
-  const { customCategories, addCategory, reorder: reorderCats } = useCustomCategories();
+  const { customCategories, categoryOrder, addCategory, reorder: reorderCats } = useCustomCategories();
 
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [tmplCat, setTmplCat]       = useState<Category | null>(null);
@@ -687,18 +691,18 @@ function ExpenseModal({
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
 
-  // カスタムカテゴリ追加・並び替え
+  // カテゴリ追加・並び替え
   const [addCatInput, setAddCatInput] = useState('');
   const [addCatVisible, setAddCatVisible] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [rDragIdx, setRDragIdx] = useState<number | null>(null);
   const [rDropIdx, setRDropIdx] = useState<number | null>(null);
-  const rDragRef   = useRef<{ dragIdx: number; startPageY: number } | null>(null);
-  const rDropRef   = useRef<number | null>(null);
+  const rDragRef      = useRef<{ dragIdx: number; startPageY: number } | null>(null);
+  const rDropRef      = useRef<number | null>(null);
   const reorderModeRef = useRef(false);
   reorderModeRef.current = reorderMode;
-  const customCatsLenRef = useRef(customCategories.length);
-  customCatsLenRef.current = customCategories.length;
+  const catOrderLenRef = useRef(categoryOrder.length);
+  catOrderLenRef.current = categoryOrder.length;
   const reorderCatsRef = useRef(reorderCats);
   reorderCatsRef.current = reorderCats;
 
@@ -706,32 +710,21 @@ function ExpenseModal({
     onStartShouldSetPanResponder:        () => reorderModeRef.current,
     onStartShouldSetPanResponderCapture: () => reorderModeRef.current,
     onPanResponderGrant: (e) => {
-      const idx = Math.max(0, Math.min(
-        customCatsLenRef.current - 1,
-        Math.floor(e.nativeEvent.locationY / CAT_ROW_H),
-      ));
+      const idx = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.floor(e.nativeEvent.locationY / CAT_ROW_H)));
       rDragRef.current = { dragIdx: idx, startPageY: e.nativeEvent.pageY };
       rDropRef.current = idx;
-      setRDragIdx(idx);
-      setRDropIdx(idx);
+      setRDragIdx(idx); setRDropIdx(idx);
     },
     onPanResponderMove: (e) => {
       if (!rDragRef.current) return;
       const { dragIdx, startPageY } = rDragRef.current;
       const dy = e.nativeEvent.pageY - startPageY;
-      const next = Math.max(0, Math.min(
-        customCatsLenRef.current - 1,
-        Math.round((dragIdx * CAT_ROW_H + dy) / CAT_ROW_H),
-      ));
-      if (next !== rDropRef.current) {
-        rDropRef.current = next;
-        setRDropIdx(next);
-      }
+      const next = Math.max(0, Math.min(catOrderLenRef.current - 1, Math.round((dragIdx * CAT_ROW_H + dy) / CAT_ROW_H)));
+      if (next !== rDropRef.current) { rDropRef.current = next; setRDropIdx(next); }
     },
     onPanResponderRelease: () => {
-      if (rDragRef.current && rDropRef.current !== null && rDragRef.current.dragIdx !== rDropRef.current) {
+      if (rDragRef.current && rDropRef.current !== null && rDragRef.current.dragIdx !== rDropRef.current)
         reorderCatsRef.current(rDragRef.current.dragIdx, rDropRef.current);
-      }
       rDragRef.current = null; rDropRef.current = null;
       setRDragIdx(null); setRDropIdx(null);
     },
@@ -740,9 +733,6 @@ function ExpenseModal({
       setRDragIdx(null); setRDropIdx(null);
     },
   })).current;
-
-
-  // プラン選択ボトムシート
   const [billingItem, setBillingItem] = useState<{
     cat: Category; item: TemplateItem;
     plan: 'monthly' | 'yearly';
@@ -1128,37 +1118,24 @@ function ExpenseModal({
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>カテゴリを選択</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {customCategories.length > 0 && !reorderMode && (
-                  <TouchableOpacity
-                    style={s.catPanelReorderBtn}
-                    onPress={() => { setReorderMode(true); setAddCatVisible(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={s.catPanelReorderTxt}>並び替え</Text>
-                  </TouchableOpacity>
-                )}
                 {reorderMode ? (
-                  <TouchableOpacity
-                    style={s.catPanelReorderBtn}
-                    onPress={() => setReorderMode(false)}
-                    activeOpacity={0.7}
-                  >
+                  <TouchableOpacity style={s.catPanelReorderBtn} onPress={() => setReorderMode(false)} activeOpacity={0.7}>
                     <Text style={s.catPanelReorderTxtActive}>完了</Text>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity
-                    style={s.catPanelAddBtn}
-                    onPress={() => { setAddCatVisible(v => !v); setAddCatInput(''); }}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={addCatVisible ? 'close' : 'add'} size={22} color="#475569" />
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity style={s.catPanelReorderBtn} onPress={() => { setReorderMode(true); setAddCatVisible(false); }} activeOpacity={0.7}>
+                      <Text style={s.catPanelReorderTxt}>並び替え</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.catPanelAddBtn} onPress={() => { setAddCatVisible(v => !v); setAddCatInput(''); }} activeOpacity={0.7}>
+                      <Ionicons name={addCatVisible ? 'close' : 'add'} size={22} color="#475569" />
+                    </TouchableOpacity>
+                  </>
                 )}
               </View>
             </View>
 
-            {/* 新しいカテゴリを追加する入力欄 */}
-            {addCatVisible && (
+            {addCatVisible && !reorderMode && (
               <View style={s.addCatRow}>
                 <TextInput
                   style={s.addCatInput}
@@ -1168,79 +1145,59 @@ function ExpenseModal({
                   placeholderTextColor="#CBD5E0"
                   autoFocus
                   returnKeyType="done"
-                  onSubmitEditing={() => {
-                    if (addCatInput.trim()) { addCategory(addCatInput.trim()); setAddCatInput(''); setAddCatVisible(false); }
-                  }}
+                  onSubmitEditing={() => { if (addCatInput.trim()) { addCategory(addCatInput.trim()); setAddCatInput(''); setAddCatVisible(false); } }}
                 />
-                <TouchableOpacity
-                  style={[s.addCatConfirmBtn, !addCatInput.trim() && { opacity: 0.4 }]}
-                  onPress={() => {
-                    if (addCatInput.trim()) { addCategory(addCatInput.trim()); setAddCatInput(''); setAddCatVisible(false); }
-                  }}
-                  activeOpacity={0.7}
-                  disabled={!addCatInput.trim()}
-                >
+                <TouchableOpacity style={[s.addCatConfirmBtn, !addCatInput.trim() && { opacity: 0.4 }]} onPress={() => { if (addCatInput.trim()) { addCategory(addCatInput.trim()); setAddCatInput(''); setAddCatVisible(false); } }} activeOpacity={0.7} disabled={!addCatInput.trim()}>
                   <Text style={s.addCatConfirmTxt}>追加</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* カスタムカテゴリ（並び替えモード時はPanResponderが全体を管理） */}
-            <View {...reorderPan.panHandlers}>
-              {customCategories.map((cat, index) => (
-                reorderMode ? (
-                  <CustomCatRow
-                    key={cat.id}
-                    cat={cat}
-                    isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
-                    reorderMode
-                    isDragging={rDragIdx === index}
-                    isDropTarget={rDropIdx === index && rDropIdx !== rDragIdx}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[s.catPanelRow, form.category === 'custom' && form.customCategoryLabel === cat.label && s.catPanelRowSelected]}
-                    onPress={() => { setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label })); closeCatPanel(); }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
-                      <Ionicons name="bookmark-outline" size={18} color={cat.color} />
-                    </View>
-                    <Text style={[s.catPanelRowText, form.category === 'custom' && form.customCategoryLabel === cat.label && s.catPanelRowTextSel]}>{cat.label}</Text>
-                    {form.category === 'custom' && form.customCategoryLabel === cat.label && <Ionicons name="checkmark" size={18} color="#475569" />}
-                  </TouchableOpacity>
-                )
-              ))}
-            </View>
-
-            {customCategories.length > 0 && (
-              <View style={s.catPanelDivider} />
-            )}
-
-            {/* 組み込みカテゴリ */}
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {CATEGORIES.filter(cat => cat !== 'custom').map(cat => {
-                const { label, color, icon } = CAT[cat];
-                const sel = form.category === cat;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[s.catPanelRow, sel && s.catPanelRowSelected]}
-                    onPress={() => {
-                      setForm(f => ({ ...f, category: cat }));
-                      closeCatPanel();
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[s.catPanelRowIcon, { backgroundColor: color + '20' }]}>
-                      <Ionicons name={icon as never} size={18} color={color} />
-                    </View>
-                    <Text style={[s.catPanelRowText, sel && s.catPanelRowTextSel]}>{label}</Text>
-                    {sel && <Ionicons name="checkmark" size={18} color="#475569" />}
-                  </TouchableOpacity>
-                );
-              })}
+            {/* 全カテゴリ統合リスト（並び替えモード時はPanResponderが管理） */}
+            <ScrollView keyboardShouldPersistTaps="handled" scrollEnabled={!reorderMode}>
+              <View {...reorderPan.panHandlers}>
+                {categoryOrder.map((id, index) => {
+                  const custom = customCategories.find(c => c.id === id);
+                  const isBuiltin = !custom && CATEGORIES.includes(id as never) && id !== 'custom';
+                  const isSelected = custom
+                    ? form.category === 'custom' && form.customCategoryLabel === custom.label
+                    : form.category === id;
+                  if (reorderMode) {
+                    return (
+                      <UnifiedCatRow
+                        key={id}
+                        id={id}
+                        customCategories={customCategories}
+                        isSelected={isSelected}
+                        reorderMode
+                        isDragging={rDragIdx === index}
+                        isDropTarget={rDropIdx === index && rDropIdx !== rDragIdx}
+                      />
+                    );
+                  }
+                  const color = custom ? custom.color : (isBuiltin ? CAT[id as Category]?.color : '#A0AEC0') ?? '#A0AEC0';
+                  const icon  = custom ? 'bookmark-outline' : (isBuiltin ? CAT[id as Category]?.icon : 'apps-outline') ?? 'apps-outline';
+                  const label = custom ? custom.label : (isBuiltin ? CAT[id as Category]?.label : id) ?? id;
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={[s.catPanelRow, isSelected && s.catPanelRowSelected]}
+                      onPress={() => {
+                        if (custom) setForm(f => ({ ...f, category: 'custom', customCategoryLabel: custom.label }));
+                        else setForm(f => ({ ...f, category: id as never }));
+                        closeCatPanel();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.catPanelRowIcon, { backgroundColor: color + '20' }]}>
+                        <Ionicons name={icon as never} size={18} color={color} />
+                      </View>
+                      <Text style={[s.catPanelRowText, isSelected && s.catPanelRowTextSel]}>{label}</Text>
+                      {isSelected && <Ionicons name="checkmark" size={18} color="#475569" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </ScrollView>
           </Animated.View>
         )}
