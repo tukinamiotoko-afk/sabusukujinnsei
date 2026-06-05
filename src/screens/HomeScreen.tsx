@@ -42,7 +42,7 @@ import {
   type Cycle,
   type Expense,
 } from '../context/ExpensesContext';
-import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, type TemplateItem } from '../data/templates';
+import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, getBillingUrl, type TemplateItem } from '../data/templates';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
 import { usePro, FREE_LIMIT } from '../context/ProContext';
 import InterstitialAdModal from '../components/InterstitialAdModal';
@@ -1383,7 +1383,19 @@ function ExpenseModal({
                 ) : (
                   /* 通常の支払日 */
                   <View style={s.billingAmtSection}>
-                    <Text style={s.qaDayPrompt}>支払日</Text>
+                    <View style={s.billingDayLabelRow}>
+                      <Text style={s.qaDayPrompt}>支払日</Text>
+                      {getBillingUrl(groupName) && (
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(getBillingUrl(groupName)!)}
+                          activeOpacity={0.7}
+                          style={s.billingCheckBtn}
+                        >
+                          <Ionicons name="open-outline" size={12} color="#475569" />
+                          <Text style={s.billingCheckTxt}>支払日を確認する</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     {effectivePlan === 'monthly' ? (
                       <View style={[s.qaDayRow, { marginTop: 10 }]}>
                         <Text style={s.qaDayLabel}>毎月</Text>
@@ -2016,6 +2028,9 @@ const s = StyleSheet.create({
 
   // 金額入力（ビリングシート内）
   billingAmtSection:    { marginBottom: 16 },
+  billingDayLabelRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 },
+  billingCheckBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8, backgroundColor: '#F1F5F9' },
+  billingCheckTxt:      { fontSize: 11, fontWeight: '600', color: '#475569' },
   billingAmtRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 14, borderWidth: 2, borderColor: '#D1D5DB', paddingLeft: 16, overflow: 'hidden', marginTop: 10 },
   billingAmtSign:       { fontSize: 22, fontWeight: '700', color: '#4A5568' },
   billingAmtInput:      { flex: 1, fontSize: 28, fontWeight: '800', color: '#475569', paddingVertical: 10, paddingLeft: 6, paddingRight: 16 },

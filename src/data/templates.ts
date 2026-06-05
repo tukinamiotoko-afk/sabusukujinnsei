@@ -245,6 +245,65 @@ export function getCancelUrl(name: string): string | null {
   return null;
 }
 
+const BILLING_URL_MAP: [string, string][] = [
+  ['Netflix',             'https://www.netflix.com/YourAccount'],
+  ['Amazon Prime',        'https://www.amazon.co.jp/gp/primecentral'],
+  ['Amazon Music',        'https://www.amazon.co.jp/music/unlimited/account'],
+  ['Kindle Unlimited',    'https://www.amazon.co.jp/kindle-dbs/hz/subscribe/ku'],
+  ['Audible',             'https://www.audible.co.jp/account/manage-membershipcancel'],
+  ['YouTube Premium',     'https://payments.google.com/'],
+  ['YouTube Music',       'https://payments.google.com/'],
+  ['Google One',          'https://one.google.com/settings'],
+  ['Apple Music',         'https://apps.apple.com/account/subscriptions'],
+  ['Apple TV',            'https://apps.apple.com/account/subscriptions'],
+  ['Apple Arcade',        'https://apps.apple.com/account/subscriptions'],
+  ['Apple One',           'https://apps.apple.com/account/subscriptions'],
+  ['iCloud',              'https://apps.apple.com/account/subscriptions'],
+  ['Spotify',             'https://www.spotify.com/jp/account/'],
+  ['Disney+',             'https://www.disneyplus.com/ja-jp/account/subscription'],
+  ['U-NEXT',              'https://video.unext.jp/my/account'],
+  ['Hulu',                'https://www.hulu.jp/account'],
+  ['ABEMA',               'https://account.abema.io/plan'],
+  ['DAZN',                'https://www.dazn.com/ja-JP/account/'],
+  ['Niconico',            'https://account.nicovideo.jp/premium'],
+  ['LINE MUSIC',          'https://music.line.me/account/plan'],
+  ['AWA',                 'https://awa.fm/account'],
+  ['PlayStation',         'https://subscriptions.sonyentertainmentnetwork.com/'],
+  ['Nintendo',            'https://accounts.nintendo.com/'],
+  ['Xbox',                'https://account.microsoft.com/services'],
+  ['ChatGPT',             'https://chat.openai.com/account/billing'],
+  ['Claude',              'https://claude.ai/settings'],
+  ['Microsoft Copilot',   'https://account.microsoft.com/services'],
+  ['Microsoft 365',       'https://account.microsoft.com/services'],
+  ['Perplexity',          'https://www.perplexity.ai/settings/subscription'],
+  ['Adobe',               'https://account.adobe.com/plans'],
+  ['Notion',              'https://www.notion.so/profile/billing'],
+  ['Dropbox',             'https://www.dropbox.com/account/billing'],
+  ['Canva',               'https://www.canva.com/settings/account/billing'],
+  ['GitHub',              'https://github.com/settings/billing'],
+  ['Figma',               'https://www.figma.com/settings/billing'],
+  ['Zoom',                'https://zoom.us/account/billing'],
+  ['Slack',               'https://slack.com/account/billing'],
+  ['NordVPN',             'https://my.nordaccount.com/dashboard/'],
+  ['ExpressVPN',          'https://www.expressvpn.com/subscriptions'],
+  ['Duolingo',            'https://www.duolingo.com/settings/plus'],
+  ['X Premium',           'https://twitter.com/settings/twitter_blue'],
+  ['Discord',             'https://discord.com/settings/subscriptions'],
+  ['Twitch',              'https://www.twitch.tv/settings/subscription'],
+  ['freee',               'https://accounts.secure.freee.co.jp/'],
+  ['マネーフォワード',     'https://moneyforward.com/bs/plan'],
+  ['dマガジン',           'https://www.dmagazine.jp/entry/change_plan/'],
+  ['楽天マガジン',         'https://magazine.rakuten.co.jp/mypage/setting'],
+  ['NewsPicks',           'https://newspicks.com/account'],
+];
+
+export function getBillingUrl(name: string): string | null {
+  for (const [keyword, url] of BILLING_URL_MAP) {
+    if (name.includes(keyword)) return url;
+  }
+  return null;
+}
+
 export const TEMPLATES: Record<Category, TemplateItem[]> = {
   subscription: [
     // ── Netflix ───────────────────────────────────────────────────────
