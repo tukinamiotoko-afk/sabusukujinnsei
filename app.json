@@ -4,11 +4,11 @@
     "slug": "sabusukujinnsei",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/sabusukujinsei_aikon.png",
+    "icon": "./assets/icon.png",
     "splash": {
-      "image": "./assets/sabusukujinsei_aikon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#475569"
+      "backgroundColor": "#1B6B5A"
     },
     "ios": {
       "supportsTablet": false,
@@ -16,16 +16,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/sabusukujinsei_aikon.png",
-        "backgroundColor": "#475569"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1B6B5A"
       },
       "package": "com.sabusukujinnsei"
     },
     "web": {
-      "favicon": "./assets/sabusukujinsei_aikon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
-      ["expo-notifications", { "icon": "./assets/sabusukujinsei_aikon.png", "color": "#475569" }],
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#1B6B5A" }],
       ["react-native-google-mobile-ads", {
         "androidAppId": "ca-app-pub-6253728869800176~1318809922",
         "iosAppId": "ca-app-pub-6253728869800176~5806214224"
