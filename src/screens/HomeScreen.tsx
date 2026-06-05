@@ -43,7 +43,7 @@ import {
   type Cycle,
   type Expense,
 } from '../context/ExpensesContext';
-import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, getBillingUrl, type TemplateItem } from '../data/templates';
+import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, getCancelSteps, getBillingUrl, type TemplateItem } from '../data/templates';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
 import { usePro, FREE_LIMIT } from '../context/ProContext';
 import InterstitialAdModal from '../components/InterstitialAdModal';
@@ -1885,6 +1885,35 @@ export default function HomeScreen() {
                     </>
                   )}
 
+                  {detailExpense.category === 'subscription' && (() => {
+                    const cancelUrl = getCancelUrl(detailExpense.name)
+                      ?? `https://www.google.com/search?q=${encodeURIComponent(detailExpense.name + ' 退会方法')}`;
+                    const steps = getCancelSteps(detailExpense.name);
+                    return (
+                      <>
+                        <View style={s.detailDivider} />
+                        <TouchableOpacity
+                          style={s.detailCancelSiteBtn}
+                          onPress={() => Linking.openURL(cancelUrl)}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="globe-outline" size={15} color="#fff" />
+                          <Text style={s.detailCancelSiteTxt}>公式サイトを開く</Text>
+                          <Ionicons name="open-outline" size={13} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={s.detailStepsLabel}>退会手順</Text>
+                        {steps.map((step, i) => (
+                          <View key={i} style={s.detailStepRow}>
+                            <View style={s.detailStepNum}>
+                              <Text style={s.detailStepNumTxt}>{i + 1}</Text>
+                            </View>
+                            <Text style={s.detailStepTxt}>{step}</Text>
+                          </View>
+                        ))}
+                      </>
+                    );
+                  })()}
+
                   <View style={s.detailDivider} />
                   <TouchableOpacity
                     style={s.detailDeleteBtn}
@@ -2016,6 +2045,13 @@ const s = StyleSheet.create({
   detailBillingTxt:   { fontSize: 14, fontWeight: '600', color: '#475569' },
   detailDeleteBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
   detailDeleteTxt:    { fontSize: 14, fontWeight: '600', color: '#FC5A5A' },
+  detailCancelSiteBtn:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#475569', borderRadius: 12, paddingVertical: 12, marginBottom: 14 },
+  detailCancelSiteTxt:{ fontSize: 14, fontWeight: '700', color: '#fff' },
+  detailStepsLabel:   { fontSize: 12, fontWeight: '700', color: '#94A3B8', marginBottom: 10 },
+  detailStepRow:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  detailStepNum:      { width: 22, height: 22, borderRadius: 11, backgroundColor: '#EBF8FF', justifyContent: 'center', alignItems: 'center', marginTop: 1 },
+  detailStepNumTxt:   { fontSize: 11, fontWeight: '800', color: '#3182CE' },
+  detailStepTxt:      { flex: 1, fontSize: 13, color: '#2D3748', lineHeight: 20 },
   empty:             { alignItems: 'center', paddingVertical: 60, gap: 10 },
   emptyTitle:        { fontSize: 16, fontWeight: '600', color: '#CBD5E0' },
   emptySub:          { fontSize: 13, color: '#CBD5E0' },
