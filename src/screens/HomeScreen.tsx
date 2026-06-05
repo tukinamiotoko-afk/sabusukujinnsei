@@ -503,11 +503,9 @@ function TemplateBrowser({
 
 // ─── カスタムフォーム ─────────────────────────────────────────────────────────
 
-function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOpenPayPanel }: {
+function CustomForm({ form, setForm, onOpenCatPanel, onOpenPayPanel }: {
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
-  showDate: boolean;
-  setShowDate: (v: boolean) => void;
   onOpenCatPanel: () => void;
   onOpenPayPanel: () => void;
 }) {
@@ -548,7 +546,7 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
               style={[s.textInput, { flex: 1, borderWidth: 0, paddingLeft: 4 }]}
               value={form.amount}
               onChangeText={v => set('amount', v.replace(/[^0-9]/g, ''))}
-              placeholder="0"
+              placeholder=""
               placeholderTextColor="#CBD5E0"
               keyboardType="number-pad"
               returnKeyType="done"
@@ -596,38 +594,6 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
             <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
           </TouchableOpacity>
         </View>
-
-        {/* 次回支払日 */}
-        <View style={s.fieldWrap}>
-          <Text style={s.fieldLabel}>次回支払日</Text>
-          <TouchableOpacity
-            style={[s.textInput, s.dateSelector]}
-            onPress={() => setShowDate(true)}
-          >
-            <Ionicons name="calendar-outline" size={18} color="#475569" />
-            <Text style={s.dateSelectorText}>
-              {format(form.nextDate, 'yyyy年M月d日(E)', { locale: ja })}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {showDate && (
-          <DateTimePicker
-            value={form.nextDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            locale="ja-JP"
-            onChange={(_, date) => {
-              if (Platform.OS === 'android') setShowDate(false);
-              if (date) set('nextDate', date);
-            }}
-          />
-        )}
-        {Platform.OS === 'ios' && showDate && (
-          <TouchableOpacity style={s.dateConfirm} onPress={() => setShowDate(false)}>
-            <Text style={s.dateConfirmText}>完了</Text>
-          </TouchableOpacity>
-        )}
 
         {/* メモ */}
         <View style={s.fieldWrap}>
@@ -703,7 +669,7 @@ function ExpenseModal({
   const [payPanel, setPayPanel] = useState(false);
   const [dayInput, setDayInput] = useState('');
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
-  const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
+  const paySlideAnim            = useRef(new Animated.Value(600)).current;
 
   // カテゴリ追加・並び替え
   const [addCatInput, setAddCatInput] = useState('');
@@ -1008,12 +974,14 @@ function ExpenseModal({
 
   const openPayPanel = () => {
     setDayInput('');
+    setShowDate(false);
     setPayPanel(true);
-    Animated.timing(paySlideAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+    Animated.timing(paySlideAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
 
   const closePayPanel = () => {
-    Animated.timing(paySlideAnim, { toValue: SCREEN_W, duration: 220, useNativeDriver: true })
+    setShowDate(false);
+    Animated.timing(paySlideAnim, { toValue: 600, duration: 250, useNativeDriver: true })
       .start(() => setPayPanel(false));
   };
 
@@ -1117,8 +1085,6 @@ function ExpenseModal({
               <CustomForm
                 form={form}
                 setForm={setForm}
-                showDate={showDate}
-                setShowDate={setShowDate}
                 onOpenCatPanel={openCatPanel}
                 onOpenPayPanel={openPayPanel}
               />
@@ -1289,7 +1255,7 @@ function ExpenseModal({
                     style={s.qaAmountInput}
                     value={quickItem.tempAmount}
                     onChangeText={v => setQuickItem(q => q && ({ ...q, tempAmount: v.replace(/[^0-9]/g, '') }))}
-                    placeholder="0"
+                    placeholder=""
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
                     autoFocus
@@ -1312,7 +1278,7 @@ function ExpenseModal({
                     style={s.qaDayInput}
                     value={quickItem.tempDay}
                     onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2), tempCustomDays: '' }))}
-                    placeholder="15"
+                    placeholder=""
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
                     maxLength={2}
@@ -1328,7 +1294,7 @@ function ExpenseModal({
                     style={[s.qaDayInput, { width: 110 }]}
                     value={quickItem.tempCustomDays}
                     onChangeText={v => setQuickItem(q => q && ({ ...q, tempCustomDays: v.replace(/[^0-9]/g, ''), tempDay: '' }))}
-                    placeholder="30"
+                    placeholder=""
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
                   />
@@ -1375,7 +1341,7 @@ function ExpenseModal({
                     style={s.qaDayInput}
                     value={quickItem.tempDay}
                     onChangeText={v => setQuickItem(q => q && ({ ...q, tempDay: v.replace(/[^0-9]/g, '').slice(0, 2) }))}
-                    placeholder="15"
+                    placeholder=""
                     placeholderTextColor="#CBD5E0"
                     keyboardType="number-pad"
                     maxLength={2}
@@ -1501,7 +1467,7 @@ function ExpenseModal({
                         style={s.billingAmtInput}
                         value={tempAmount}
                         onChangeText={v => setBillingItem(b => b && ({ ...b, tempAmount: v.replace(/[^0-9]/g, '') }))}
-                        placeholder="0"
+                        placeholder=""
                         placeholderTextColor="#CBD5E0"
                         keyboardType="number-pad"
                       />
@@ -1670,73 +1636,97 @@ function ExpenseModal({
           );
         })()}
 
-        {/* 支払スライドパネル */}
+        {/* 支払ボトムシート */}
         {payPanel && (
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: '#F8FAFC', transform: [{ translateX: paySlideAnim }] },
-            ]}
-          >
-            <View style={s.catPanelHeader}>
-              <TouchableOpacity style={s.catPanelBackBtn} onPress={closePayPanel} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color="#475569" />
-              </TouchableOpacity>
-              <Text style={s.catPanelTitle}>支払周期と支払日</Text>
-              <View style={{ width: 44 }} />
-            </View>
-            <View style={s.payPanelContent}>
+          <>
+            <TouchableOpacity
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.35)' }]}
+              onPress={closePayPanel}
+              activeOpacity={1}
+            />
+            <Animated.View style={[s.paySheet, { transform: [{ translateY: paySlideAnim }] }]}>
+              <View style={s.detailHandle} />
+              <Text style={[s.catPanelTitle, { paddingHorizontal: 20, marginBottom: 16 }]}>支払設定</Text>
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ paddingHorizontal: 20 }}>
 
-              {/* 毎月の支払日 */}
-              <Text style={s.dayPanelSection}>毎月の支払日</Text>
-              <Text style={s.inputHint}>毎月決まった日に引き落とされる場合に入力</Text>
-              <View style={s.dayPanel}>
-                <View style={s.dayRow}>
-                  <Text style={s.dayRowLabel}>毎月</Text>
-                  <TextInput
-                    style={s.dayNumInput}
-                    value={dayInput}
-                    onChangeText={handleDay}
-                    placeholder="15"
-                    placeholderTextColor="#CBD5E0"
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                  <Text style={s.dayRowLabel}>日払い</Text>
+                {/* 毎月の支払日 */}
+                <Text style={s.dayPanelSection}>毎月の支払日</Text>
+                <Text style={s.inputHint}>毎月決まった日に引き落とされる場合</Text>
+                <View style={s.dayPanel}>
+                  <View style={s.dayRow}>
+                    <Text style={s.dayRowLabel}>毎月</Text>
+                    <TextInput
+                      style={s.dayNumInput}
+                      value={dayInput}
+                      onChangeText={handleDay}
+                      placeholder=""
+                      placeholderTextColor="#CBD5E0"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                    <Text style={s.dayRowLabel}>日払い</Text>
+                  </View>
                 </View>
-              </View>
 
-              <View style={s.dayPanelDivider} />
+                <View style={s.dayPanelDivider} />
 
-              {/* 支払周期（日数入力） */}
-              <Text style={s.dayPanelSection}>支払周期</Text>
-              <Text style={s.inputHint}>引き落とし間隔を日数で入力（例: 30・60・90）</Text>
-              <View style={s.dayPanel}>
-                <View style={s.dayRow}>
-                  <TextInput
-                    style={[s.dayNumInput, { width: 110 }]}
-                    value={form.customCycleDays}
-                    onChangeText={v => {
-                      setDayInput('');
-                      setForm(f => ({
-                        ...f,
-                        customCycleDays: v.replace(/[^0-9]/g, ''),
-                        cycle: 'custom',
-                      }));
+                {/* 支払周期 */}
+                <Text style={s.dayPanelSection}>支払周期</Text>
+                <Text style={s.inputHint}>引き落とし間隔を日数で入力（例: 30・60・90）</Text>
+                <View style={s.dayPanel}>
+                  <View style={s.dayRow}>
+                    <TextInput
+                      style={[s.dayNumInput, { width: 110 }]}
+                      value={form.customCycleDays}
+                      onChangeText={v => {
+                        setDayInput('');
+                        setForm(f => ({ ...f, customCycleDays: v.replace(/[^0-9]/g, ''), cycle: 'custom' }));
+                      }}
+                      placeholder=""
+                      placeholderTextColor="#CBD5E0"
+                      keyboardType="number-pad"
+                    />
+                    <Text style={s.dayRowLabel}>日ごと</Text>
+                  </View>
+                </View>
+
+                <View style={s.dayPanelDivider} />
+
+                {/* 次回支払日 */}
+                <Text style={s.dayPanelSection}>次回支払日</Text>
+                <TouchableOpacity
+                  style={[s.textInput, s.dateSelector, { marginBottom: 4 }]}
+                  onPress={() => setShowDate(v => !v)}
+                >
+                  <Ionicons name="calendar-outline" size={18} color="#475569" />
+                  <Text style={s.dateSelectorText}>
+                    {format(form.nextDate, 'yyyy年M月d日(E)', { locale: ja })}
+                  </Text>
+                </TouchableOpacity>
+                {showDate && (
+                  <DateTimePicker
+                    value={form.nextDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    locale="ja-JP"
+                    onChange={(_, date) => {
+                      if (Platform.OS === 'android') setShowDate(false);
+                      if (date) setForm(f => ({ ...f, nextDate: date }));
                     }}
-                    placeholder="30"
-                    placeholderTextColor="#CBD5E0"
-                    keyboardType="number-pad"
                   />
-                  <Text style={s.dayRowLabel}>日ごと</Text>
-                </View>
-              </View>
+                )}
+                {Platform.OS === 'ios' && showDate && (
+                  <TouchableOpacity style={s.dateConfirm} onPress={() => setShowDate(false)}>
+                    <Text style={s.dateConfirmText}>確定</Text>
+                  </TouchableOpacity>
+                )}
 
-              <TouchableOpacity style={[s.qaBtn, { marginTop: 20 }]} onPress={closePayPanel} activeOpacity={0.85}>
-                <Text style={s.qaBtnText}>完了</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+                <TouchableOpacity style={[s.qaBtn, { marginTop: 20, marginBottom: 8 }]} onPress={closePayPanel} activeOpacity={0.85}>
+                  <Text style={s.qaBtnText}>完了</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </Animated.View>
+          </>
         )}
       </KeyboardAvoidingView>
     </Modal>
@@ -2690,6 +2680,7 @@ const s = StyleSheet.create({
 
   // 支払スライドパネル
   payPanelContent:    { padding: 16, paddingBottom: 40 },
+  paySheet:           { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, paddingBottom: 40, maxHeight: '90%' },
   payPanelCycleList:  { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#EDF2F7' },
 
   inputHint:          { fontSize: 12, color: '#A0AEC0', marginTop: -4, marginBottom: 8 },
