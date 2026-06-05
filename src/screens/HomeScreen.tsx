@@ -636,34 +636,39 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
 // ─── カスタムカテゴリ行 ───────────────────────────────────────────────────────
 
 function CustomCatRow({
-  cat, index, total, isSelected, onSelect, onMoveUp, onMoveDown,
+  cat, index, total, isSelected, reorderMode, onSelect, onMoveUp, onMoveDown,
 }: {
   cat: CustomCategory;
   index: number;
   total: number;
   isSelected: boolean;
+  reorderMode: boolean;
   onSelect: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }) {
   return (
-    <View style={[s.catPanelRow, isSelected && s.catPanelRowSelected]}>
-      <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }} onPress={onSelect} activeOpacity={0.7}>
-        <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
-          <Ionicons name="bookmark-outline" size={18} color={cat.color} />
-        </View>
-        <Text style={[s.catPanelRowText, isSelected && s.catPanelRowTextSel]}>{cat.label}</Text>
-        {isSelected && <Ionicons name="checkmark" size={18} color="#475569" />}
-      </TouchableOpacity>
-      <View style={s.catReorderBtns}>
-        <TouchableOpacity onPress={onMoveUp} disabled={index === 0} style={[s.catReorderBtn, index === 0 && { opacity: 0.2 }]} activeOpacity={0.6}>
-          <Ionicons name="chevron-up" size={18} color="#475569" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onMoveDown} disabled={index === total - 1} style={[s.catReorderBtn, index === total - 1 && { opacity: 0.2 }]} activeOpacity={0.6}>
-          <Ionicons name="chevron-down" size={18} color="#475569" />
-        </TouchableOpacity>
+    <TouchableOpacity
+      style={[s.catPanelRow, isSelected && !reorderMode && s.catPanelRowSelected]}
+      onPress={onSelect}
+      activeOpacity={reorderMode ? 1 : 0.7}
+    >
+      <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
+        <Ionicons name="bookmark-outline" size={18} color={cat.color} />
       </View>
-    </View>
+      <Text style={[s.catPanelRowText, isSelected && !reorderMode && s.catPanelRowTextSel]}>{cat.label}</Text>
+      {isSelected && !reorderMode && <Ionicons name="checkmark" size={18} color="#475569" />}
+      {reorderMode && (
+        <View style={s.catReorderBtns}>
+          <TouchableOpacity onPress={onMoveUp} disabled={index === 0} style={[s.catReorderBtn, index === 0 && { opacity: 0.2 }]} activeOpacity={0.6}>
+            <Ionicons name="chevron-up" size={20} color="#475569" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onMoveDown} disabled={index === total - 1} style={[s.catReorderBtn, index === total - 1 && { opacity: 0.2 }]} activeOpacity={0.6}>
+            <Ionicons name="chevron-down" size={20} color="#475569" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -692,9 +697,10 @@ function ExpenseModal({
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
 
-  // カスタムカテゴリ追加
+  // カスタムカテゴリ追加・並び替え
   const [addCatInput, setAddCatInput] = useState('');
   const [addCatVisible, setAddCatVisible] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
 
 
   // プラン選択ボトムシート
@@ -1082,13 +1088,28 @@ function ExpenseModal({
                 <Ionicons name="chevron-back" size={22} color="#475569" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>カテゴリを選択</Text>
-              <TouchableOpacity
-                style={s.catPanelAddBtn}
-                onPress={() => { setAddCatVisible(v => !v); setAddCatInput(''); }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={addCatVisible ? 'close' : 'add'} size={22} color="#475569" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {customCategories.length > 1 && (
+                  <TouchableOpacity
+                    style={s.catPanelReorderBtn}
+                    onPress={() => { setReorderMode(v => !v); setAddCatVisible(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.catPanelReorderTxt, reorderMode && s.catPanelReorderTxtActive]}>
+                      {reorderMode ? '完了' : '並び替え'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {!reorderMode && (
+                  <TouchableOpacity
+                    style={s.catPanelAddBtn}
+                    onPress={() => { setAddCatVisible(v => !v); setAddCatInput(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={addCatVisible ? 'close' : 'add'} size={22} color="#475569" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             {/* 新しいカテゴリを追加する入力欄 */}
@@ -1119,7 +1140,7 @@ function ExpenseModal({
               </View>
             )}
 
-            {/* カスタムカテゴリ（↑↓ボタンで並び替え） */}
+            {/* カスタムカテゴリ */}
             {customCategories.map((cat, index) => (
               <CustomCatRow
                 key={cat.id}
@@ -1127,7 +1148,9 @@ function ExpenseModal({
                 index={index}
                 total={customCategories.length}
                 isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
+                reorderMode={reorderMode}
                 onSelect={() => {
+                  if (reorderMode) return;
                   setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label }));
                   closeCatPanel();
                 }}
@@ -2329,6 +2352,9 @@ const s = StyleSheet.create({
   catPanelHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   catPanelBackBtn:      { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   catPanelAddBtn:       { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  catPanelReorderBtn:   { paddingHorizontal: 12, paddingVertical: 6 },
+  catPanelReorderTxt:   { fontSize: 14, fontWeight: '600', color: '#475569' },
+  catPanelReorderTxtActive: { color: '#3182CE' },
   catPanelTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
   catPanelRow:          { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', gap: 14 },
   catPanelRowSelected:  { backgroundColor: '#F3F4F6' },
