@@ -635,40 +635,30 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
 
 // ─── カスタムカテゴリ行 ───────────────────────────────────────────────────────
 
-function CustomCatRow({
-  cat, index, total, isSelected, reorderMode, onSelect, onMoveUp, onMoveDown,
-}: {
+const CAT_ROW_H = 56;
+
+function CustomCatRow({ cat, isSelected, reorderMode, isDragging, isDropTarget }: {
   cat: CustomCategory;
-  index: number;
-  total: number;
   isSelected: boolean;
   reorderMode: boolean;
-  onSelect: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  isDragging: boolean;
+  isDropTarget: boolean;
 }) {
   return (
-    <TouchableOpacity
-      style={[s.catPanelRow, isSelected && !reorderMode && s.catPanelRowSelected]}
-      onPress={onSelect}
-      activeOpacity={reorderMode ? 1 : 0.7}
-    >
+    <View style={[
+      s.catPanelRow,
+      { height: CAT_ROW_H },
+      isSelected && !reorderMode && s.catPanelRowSelected,
+      isDragging   && s.catRowDragging,
+      isDropTarget && s.catRowDropTarget,
+    ]}>
       <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
         <Ionicons name="bookmark-outline" size={18} color={cat.color} />
       </View>
       <Text style={[s.catPanelRowText, isSelected && !reorderMode && s.catPanelRowTextSel]}>{cat.label}</Text>
       {isSelected && !reorderMode && <Ionicons name="checkmark" size={18} color="#475569" />}
-      {reorderMode && (
-        <View style={s.catReorderBtns}>
-          <TouchableOpacity onPress={onMoveUp} disabled={index === 0} style={[s.catReorderBtn, index === 0 && { opacity: 0.2 }]} activeOpacity={0.6}>
-            <Ionicons name="chevron-up" size={20} color="#475569" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onMoveDown} disabled={index === total - 1} style={[s.catReorderBtn, index === total - 1 && { opacity: 0.2 }]} activeOpacity={0.6}>
-            <Ionicons name="chevron-down" size={20} color="#475569" />
-          </TouchableOpacity>
-        </View>
-      )}
-    </TouchableOpacity>
+      {reorderMode && <Ionicons name="reorder-three-outline" size={22} color="#94A3B8" />}
+    </View>
   );
 }
 
@@ -701,6 +691,55 @@ function ExpenseModal({
   const [addCatInput, setAddCatInput] = useState('');
   const [addCatVisible, setAddCatVisible] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
+  const [rDragIdx, setRDragIdx] = useState<number | null>(null);
+  const [rDropIdx, setRDropIdx] = useState<number | null>(null);
+  const rDragRef   = useRef<{ dragIdx: number; startPageY: number } | null>(null);
+  const rDropRef   = useRef<number | null>(null);
+  const reorderModeRef = useRef(false);
+  reorderModeRef.current = reorderMode;
+  const customCatsLenRef = useRef(customCategories.length);
+  customCatsLenRef.current = customCategories.length;
+  const reorderCatsRef = useRef(reorderCats);
+  reorderCatsRef.current = reorderCats;
+
+  const reorderPan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder:        () => reorderModeRef.current,
+    onStartShouldSetPanResponderCapture: () => reorderModeRef.current,
+    onPanResponderGrant: (e) => {
+      const idx = Math.max(0, Math.min(
+        customCatsLenRef.current - 1,
+        Math.floor(e.nativeEvent.locationY / CAT_ROW_H),
+      ));
+      rDragRef.current = { dragIdx: idx, startPageY: e.nativeEvent.pageY };
+      rDropRef.current = idx;
+      setRDragIdx(idx);
+      setRDropIdx(idx);
+    },
+    onPanResponderMove: (e) => {
+      if (!rDragRef.current) return;
+      const { dragIdx, startPageY } = rDragRef.current;
+      const dy = e.nativeEvent.pageY - startPageY;
+      const next = Math.max(0, Math.min(
+        customCatsLenRef.current - 1,
+        Math.round((dragIdx * CAT_ROW_H + dy) / CAT_ROW_H),
+      ));
+      if (next !== rDropRef.current) {
+        rDropRef.current = next;
+        setRDropIdx(next);
+      }
+    },
+    onPanResponderRelease: () => {
+      if (rDragRef.current && rDropRef.current !== null && rDragRef.current.dragIdx !== rDropRef.current) {
+        reorderCatsRef.current(rDragRef.current.dragIdx, rDropRef.current);
+      }
+      rDragRef.current = null; rDropRef.current = null;
+      setRDragIdx(null); setRDropIdx(null);
+    },
+    onPanResponderTerminate: () => {
+      rDragRef.current = null; rDropRef.current = null;
+      setRDragIdx(null); setRDropIdx(null);
+    },
+  })).current;
 
 
   // プラン選択ボトムシート
@@ -1140,24 +1179,34 @@ function ExpenseModal({
               </View>
             )}
 
-            {/* カスタムカテゴリ */}
-            {customCategories.map((cat, index) => (
-              <CustomCatRow
-                key={cat.id}
-                cat={cat}
-                index={index}
-                total={customCategories.length}
-                isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
-                reorderMode={reorderMode}
-                onSelect={() => {
-                  if (reorderMode) return;
-                  setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label }));
-                  closeCatPanel();
-                }}
-                onMoveUp={() => reorderCats(index, index - 1)}
-                onMoveDown={() => reorderCats(index, index + 1)}
-              />
-            ))}
+            {/* カスタムカテゴリ（並び替えモード時はPanResponderが全体を管理） */}
+            <View {...reorderPan.panHandlers}>
+              {customCategories.map((cat, index) => (
+                reorderMode ? (
+                  <CustomCatRow
+                    key={cat.id}
+                    cat={cat}
+                    isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
+                    reorderMode
+                    isDragging={rDragIdx === index}
+                    isDropTarget={rDropIdx === index && rDropIdx !== rDragIdx}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[s.catPanelRow, form.category === 'custom' && form.customCategoryLabel === cat.label && s.catPanelRowSelected]}
+                    onPress={() => { setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label })); closeCatPanel(); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
+                      <Ionicons name="bookmark-outline" size={18} color={cat.color} />
+                    </View>
+                    <Text style={[s.catPanelRowText, form.category === 'custom' && form.customCategoryLabel === cat.label && s.catPanelRowTextSel]}>{cat.label}</Text>
+                    {form.category === 'custom' && form.customCategoryLabel === cat.label && <Ionicons name="checkmark" size={18} color="#475569" />}
+                  </TouchableOpacity>
+                )
+              ))}
+            </View>
 
             {customCategories.length > 0 && (
               <View style={s.catPanelDivider} />
@@ -2361,8 +2410,8 @@ const s = StyleSheet.create({
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
   catPanelRowTextSel:   { color: '#475569', fontWeight: '700' },
-  catReorderBtns:       { flexDirection: 'column', gap: 0 },
-  catReorderBtn:        { padding: 4 },
+  catRowDragging:       { backgroundColor: '#E2E8F0', opacity: 0.5 },
+  catRowDropTarget:     { borderTopWidth: 2, borderTopColor: '#3182CE', backgroundColor: '#EBF8FF' },
   catPanelDivider:      { height: 8, backgroundColor: '#F1F5F9' },
   addCatRow:            { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   addCatInput:          { flex: 1, fontSize: 15, color: '#1A202C', backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 9 },
