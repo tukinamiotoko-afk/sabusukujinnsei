@@ -633,77 +633,36 @@ function CustomForm({ form, setForm, showDate, setShowDate, onOpenCatPanel, onOp
   );
 }
 
-// ─── ドラッグ可能カテゴリ行 ──────────────────────────────────────────────────
+// ─── カスタムカテゴリ行 ───────────────────────────────────────────────────────
 
-const DRAG_ROW_H = 54;
-const LONG_PRESS_MS = 280;
-
-function DraggableCatRow({
-  cat, isSelected, isDragging, isDropTarget,
-  onSelect, onDragStart, onDragMove, onDragEnd,
+function CustomCatRow({
+  cat, index, total, isSelected, onSelect, onMoveUp, onMoveDown,
 }: {
   cat: CustomCategory;
+  index: number;
+  total: number;
   isSelected: boolean;
-  isDragging: boolean;
-  isDropTarget: boolean;
   onSelect: () => void;
-  onDragStart: (pageY: number) => void;
-  onDragMove: (pageY: number) => void;
-  onDragEnd: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
-  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragActive   = useRef(false);
-
-  const pan = useRef(PanResponder.create({
-    onStartShouldSetPanResponder:         () => true,
-    onStartShouldSetPanResponderCapture:  () => false,
-    onPanResponderGrant: (e) => {
-      dragActive.current = false;
-      const pageY = e.nativeEvent.pageY;
-      timerRef.current = setTimeout(() => {
-        dragActive.current = true;
-        onDragStart(pageY);
-      }, LONG_PRESS_MS);
-    },
-    onPanResponderMove: (e, g) => {
-      if (dragActive.current) {
-        onDragMove(e.nativeEvent.pageY);
-      } else if (Math.abs(g.dy) > 6) {
-        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      }
-    },
-    onPanResponderRelease: (_, g) => {
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      if (dragActive.current) {
-        onDragEnd();
-      } else if (Math.abs(g.dy) < 6) {
-        onSelect();
-      }
-      dragActive.current = false;
-    },
-    onPanResponderTerminate: () => {
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      if (dragActive.current) onDragEnd();
-      dragActive.current = false;
-    },
-  })).current;
-
   return (
-    <View
-      {...pan.panHandlers}
-      style={[
-        s.catPanelRow,
-        isSelected   && s.catPanelRowSelected,
-        isDragging   && s.catRowDragging,
-        isDropTarget && s.catRowDropTarget,
-      ]}
-    >
-      <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
-        <Ionicons name="bookmark-outline" size={18} color={cat.color} />
+    <View style={[s.catPanelRow, isSelected && s.catPanelRowSelected]}>
+      <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }} onPress={onSelect} activeOpacity={0.7}>
+        <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
+          <Ionicons name="bookmark-outline" size={18} color={cat.color} />
+        </View>
+        <Text style={[s.catPanelRowText, isSelected && s.catPanelRowTextSel]}>{cat.label}</Text>
+        {isSelected && <Ionicons name="checkmark" size={18} color="#475569" />}
+      </TouchableOpacity>
+      <View style={s.catReorderBtns}>
+        <TouchableOpacity onPress={onMoveUp} disabled={index === 0} style={[s.catReorderBtn, index === 0 && { opacity: 0.2 }]} activeOpacity={0.6}>
+          <Ionicons name="chevron-up" size={18} color="#475569" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onMoveDown} disabled={index === total - 1} style={[s.catReorderBtn, index === total - 1 && { opacity: 0.2 }]} activeOpacity={0.6}>
+          <Ionicons name="chevron-down" size={18} color="#475569" />
+        </TouchableOpacity>
       </View>
-      <Text style={[s.catPanelRowText, isSelected && s.catPanelRowTextSel]}>{cat.label}</Text>
-      {isSelected && <Ionicons name="checkmark" size={18} color="#475569" style={{ marginRight: 4 }} />}
-      <Ionicons name="reorder-three-outline" size={22} color="#CBD5E0" />
     </View>
   );
 }
@@ -737,41 +696,6 @@ function ExpenseModal({
   const [addCatInput, setAddCatInput] = useState('');
   const [addCatVisible, setAddCatVisible] = useState(false);
 
-  // ドラッグ並び替え
-  const dragIdxRef = useRef<number | null>(null);
-  const dropIdxRef = useRef<number | null>(null);
-  const dragAnchorY = useRef(0);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dropIdx, setDropIdx] = useState<number | null>(null);
-
-  const handleDragStart = (index: number, pageY: number) => {
-    dragIdxRef.current = index;
-    dropIdxRef.current = index;
-    dragAnchorY.current = pageY - index * DRAG_ROW_H;
-    setDragIdx(index);
-    setDropIdx(index);
-  };
-
-  const handleDragMove = (pageY: number) => {
-    const n = customCategories.length;
-    if (n === 0) return;
-    const raw = pageY - dragAnchorY.current;
-    const next = Math.max(0, Math.min(n - 1, Math.round(raw / DRAG_ROW_H)));
-    if (next !== dropIdxRef.current) {
-      dropIdxRef.current = next;
-      setDropIdx(next);
-    }
-  };
-
-  const handleDragEnd = () => {
-    const from = dragIdxRef.current;
-    const to   = dropIdxRef.current;
-    if (from !== null && to !== null && from !== to) reorderCats(from, to);
-    dragIdxRef.current = null;
-    dropIdxRef.current = null;
-    setDragIdx(null);
-    setDropIdx(null);
-  };
 
   // プラン選択ボトムシート
   const [billingItem, setBillingItem] = useState<{
@@ -1195,21 +1119,20 @@ function ExpenseModal({
               </View>
             )}
 
-            {/* カスタムカテゴリ: ScrollViewの外に置いてジェスチャー競合を回避 */}
+            {/* カスタムカテゴリ（↑↓ボタンで並び替え） */}
             {customCategories.map((cat, index) => (
-              <DraggableCatRow
+              <CustomCatRow
                 key={cat.id}
                 cat={cat}
+                index={index}
+                total={customCategories.length}
                 isSelected={form.category === 'custom' && form.customCategoryLabel === cat.label}
-                isDragging={dragIdx === index}
-                isDropTarget={dropIdx === index && dropIdx !== dragIdx}
                 onSelect={() => {
                   setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label }));
                   closeCatPanel();
                 }}
-                onDragStart={(pageY) => handleDragStart(index, pageY)}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
+                onMoveUp={() => reorderCats(index, index - 1)}
+                onMoveDown={() => reorderCats(index, index + 1)}
               />
             ))}
 
@@ -2412,8 +2335,8 @@ const s = StyleSheet.create({
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
   catPanelRowTextSel:   { color: '#475569', fontWeight: '700' },
-  catRowDragging:       { opacity: 0.35, backgroundColor: '#F1F5F9' },
-  catRowDropTarget:     { backgroundColor: '#EBF8FF', borderLeftWidth: 3, borderLeftColor: '#3182CE' },
+  catReorderBtns:       { flexDirection: 'column', gap: 0 },
+  catReorderBtn:        { padding: 4 },
   catPanelDivider:      { height: 8, backgroundColor: '#F1F5F9' },
   addCatRow:            { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   addCatInput:          { flex: 1, fontSize: 15, color: '#1A202C', backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 9 },
