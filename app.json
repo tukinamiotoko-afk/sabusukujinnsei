@@ -25,11 +25,7 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
-      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#1B6B5A" }],
-      ["react-native-google-mobile-ads", {
-        "androidAppId": "ca-app-pub-6253728869800176~1318809922",
-        "iosAppId": "ca-app-pub-6253728869800176~5806214224"
-      }]
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#1B6B5A" }]
     ]
   }
 }
