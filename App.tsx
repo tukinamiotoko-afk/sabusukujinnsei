@@ -6,7 +6,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import mobileAds from 'react-native-google-mobile-ads';
+let mobileAds: any = null;
+try { mobileAds = require('react-native-google-mobile-ads').default; } catch {}
 import { ExpensesProvider } from './src/context/ExpensesContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ProProvider } from './src/context/ProContext';
@@ -74,7 +75,7 @@ export default function App() {
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
-    mobileAds().initialize().catch(() => {});
+    try { mobileAds?.()?.initialize?.().catch(() => {}); } catch {}
     AsyncStorage.getItem(ONBOARDING_KEY).then(v => setOnboardingDone(v === 'true'));
   }, []);
 
