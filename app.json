@@ -15,10 +15,7 @@
       "bundleIdentifier": "com.sabusukujinnsei"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#1B6B5A"
-      },
+      "icon": "./assets/icon.png",
       "package": "com.sabusukujinnsei"
     },
     "web": {
