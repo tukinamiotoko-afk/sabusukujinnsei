@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
+const SCREEN_H = Dimensions.get('window').height;
 const TMPL_CARD_W = Math.floor((SCREEN_W - 24 - 16) / 3);
 const SWIPE_ACTION_W   = 96;
 const SWIPE_THRESHOLD  = 44;
@@ -1581,6 +1582,9 @@ export default function HomeScreen() {
   const [form, setForm]     = useState<FormState>(blankForm());
   const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name'>('date');
   const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
+  const [filterCat, setFilterCat] = useState<Category | 'all'>('all');
+  const [filterTiming, setFilterTiming] = useState<'all' | 'soon' | 'overdue'>('all');
+  const [filterVisible, setFilterVisible] = useState(false);
 
   const monthlyTotal = expenses.reduce(
     (sum, e) => sum + monthlyEq(e.amount, e.cycle, e.customCycleDays), 0
@@ -1634,6 +1638,15 @@ export default function HomeScreen() {
     if (sortKey === 'amountAsc')  return monthlyEq(a.amount, a.cycle, a.customCycleDays) - monthlyEq(b.amount, b.cycle, b.customCycleDays);
     if (sortKey === 'name')       return a.name.localeCompare(b.name, 'ja');
     return new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime();
+  });
+
+  const activeFilterCount = (filterCat !== 'all' ? 1 : 0) + (filterTiming !== 'all' ? 1 : 0);
+  const displayed = sorted.filter(exp => {
+    if (filterCat !== 'all' && exp.category !== filterCat) return false;
+    const d = daysUntil(exp.nextDate);
+    if (filterTiming === 'soon') return d >= 0 && d <= 7;
+    if (filterTiming === 'overdue') return d < 0;
+    return true;
   });
 
   const openAdd = () => {
@@ -1738,8 +1751,20 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      <View style={s.listHeader}>
-        <Text style={s.listTitle}>登録一覧</Text>
+      <View style={s.listHeaderWrap}>
+        <View style={s.listHeaderRow}>
+          <Text style={s.listTitle}>登録一覧</Text>
+          <TouchableOpacity
+            style={[s.filterBtn, activeFilterCount > 0 && s.filterBtnActive]}
+            onPress={() => setFilterVisible(true)}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="funnel-outline" size={13} color={activeFilterCount > 0 ? '#fff' : '#64748B'} />
+            <Text style={[s.filterBtnTxt, activeFilterCount > 0 && s.filterBtnTxtActive]}>
+              絞り込み{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={s.sortBtns}>
           {(['date','amountDesc','amountAsc','name'] as const).map(k => (
             <TouchableOpacity key={k} style={[s.sortBtn, sortKey === k && s.sortBtnActive]} onPress={() => setSortKey(k)}>
@@ -1756,14 +1781,20 @@ export default function HomeScreen() {
         contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 90 }]}
         showsVerticalScrollIndicator={false}
       >
-        {sorted.length === 0 ? (
+        {expenses.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="receipt-outline" size={52} color="#CBD5E0" />
             <Text style={s.emptyTitle}>登録がありません</Text>
             <Text style={s.emptySub}>右下の ＋ ボタンから追加できます</Text>
           </View>
+        ) : displayed.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="funnel-outline" size={52} color="#CBD5E0" />
+            <Text style={s.emptyTitle}>該当する項目がありません</Text>
+            <Text style={s.emptySub}>絞り込み条件を変えてみてください</Text>
+          </View>
         ) : (
-          sorted.map(exp => (
+          displayed.map(exp => (
             <ExpenseCard
               key={exp.id}
               expense={exp}
@@ -1783,21 +1814,24 @@ export default function HomeScreen() {
         onRequestClose={() => setDetailExpense(null)}
       >
         <Pressable style={s.detailOverlay} onPress={() => setDetailExpense(null)}>
-          <Pressable style={[s.detailSheet, { paddingBottom: insets.bottom + 24 }]} onPress={() => {}}>
+          <Pressable style={[s.detailSheet, { maxHeight: SCREEN_H * 0.88 }]} onPress={() => {}}>
+            <View style={s.detailHandle} />
             {detailExpense && (() => {
               const { color, icon } = CAT[detailExpense.category];
               const days   = daysUntil(detailExpense.nextDate);
               const overdue = days < 0;
               const soon    = days >= 0 && days <= 7;
               const monthly = monthlyEq(detailExpense.amount, detailExpense.cycle, detailExpense.customCycleDays);
-              const billingUrl = getBillingUrl(detailExpense.name);
               const cycleLabel = detailExpense.cycle === 'monthly' ? '/月'
                                : detailExpense.cycle === 'yearly'  ? '/年'
                                : detailExpense.cycle === 'custom'  ? `/${detailExpense.customCycleDays}日`
                                : '';
               return (
-                <>
-                  <View style={s.detailHandle} />
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }}
+                >
+                  <>
                   {/* ヘッダー: 編集ボタン右上 */}
                   <View style={s.detailTopRow}>
                     <View style={{ flex: 1 }} />
@@ -1871,20 +1905,6 @@ export default function HomeScreen() {
                     ) : null}
                   </View>
 
-                  {billingUrl && (
-                    <>
-                      <View style={s.detailDivider} />
-                      <TouchableOpacity
-                        style={s.detailBillingBtn}
-                        onPress={() => Linking.openURL(billingUrl)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="open-outline" size={14} color="#475569" />
-                        <Text style={s.detailBillingTxt}>支払日を確認する</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-
                   {detailExpense.category === 'subscription' && (() => {
                     const cancelUrl = getCancelUrl(detailExpense.name)
                       ?? `https://www.google.com/search?q=${encodeURIComponent(detailExpense.name + ' 退会方法')}`;
@@ -1924,8 +1944,65 @@ export default function HomeScreen() {
                     <Text style={s.detailDeleteTxt}>削除</Text>
                   </TouchableOpacity>
                 </>
+                </ScrollView>
               );
             })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── 絞り込みシート ── */}
+      <Modal
+        visible={filterVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterVisible(false)}
+      >
+        <Pressable style={s.detailOverlay} onPress={() => setFilterVisible(false)}>
+          <Pressable style={[s.filterSheet, { paddingBottom: insets.bottom + 16 }]} onPress={() => {}}>
+            <View style={s.detailHandle} />
+            <View style={s.filterSheetHeader}>
+              <Text style={s.filterSheetTitle}>絞り込み</Text>
+              {activeFilterCount > 0 && (
+                <TouchableOpacity onPress={() => { setFilterCat('all'); setFilterTiming('all'); }}>
+                  <Text style={s.filterResetTxt}>リセット</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <Text style={s.filterSectionLabel}>カテゴリ</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+              {([['all','すべて'],['subscription','サブスク'],['housing','住居費'],['insurance','保険'],['telecom','通信費'],['loan','ローン'],['transport','交通定期'],['lesson','習い事'],['delivery','定期購入'],['membership','会費'],['social','社会保険'],['other','その他']] as [Category|'all',string][]).map(([val, label]) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[s.filterChip, filterCat === val && s.filterChipSel]}
+                  onPress={() => setFilterCat(val)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.filterChipTxt, filterCat === val && s.filterChipTxtSel]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={s.filterSectionLabel}>支払いタイミング</Text>
+            <View style={s.filterChipRow}>
+              {([['all','すべて'],['soon','7日以内'],['overdue','期限超過']] as ['all'|'soon'|'overdue',string][]).map(([val, label]) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[s.filterChip, filterTiming === val && s.filterChipSel]}
+                  onPress={() => setFilterTiming(val)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.filterChipTxt, filterTiming === val && s.filterChipTxtSel]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={s.filterCloseBtn} onPress={() => setFilterVisible(false)} activeOpacity={0.8}>
+              <Text style={s.filterCloseBtnTxt}>
+                {activeFilterCount > 0 ? `この条件で絞り込む (${displayed.length}件)` : '閉じる'}
+              </Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1981,8 +2058,25 @@ const s = StyleSheet.create({
   nextName:          { flex: 1, fontSize: 15, fontWeight: '700', color: '#1A202C' },
   nextDate:          { fontSize: 13, color: '#718096' },
   nextAmount:        { fontSize: 15, fontWeight: '800', color: '#475569', marginLeft: 8 },
-  listHeader:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  listHeaderWrap:    { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 8 },
+  listHeaderRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   listTitle:         { fontSize: 16, fontWeight: '700', color: '#1A202C' },
+  filterBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 11, borderRadius: 20, backgroundColor: '#F1F5F9' },
+  filterBtnActive:   { backgroundColor: '#475569' },
+  filterBtnTxt:      { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  filterBtnTxtActive:{ color: '#fff' },
+  filterSheet:       { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingHorizontal: 20 },
+  filterSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, marginTop: 8 },
+  filterSheetTitle:  { fontSize: 17, fontWeight: '700', color: '#1A202C' },
+  filterResetTxt:    { fontSize: 13, fontWeight: '600', color: '#FC5A5A' },
+  filterSectionLabel:{ fontSize: 12, fontWeight: '700', color: '#94A3B8', marginBottom: 10 },
+  filterChipRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  filterChip:        { paddingVertical: 7, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  filterChipSel:     { backgroundColor: '#475569', borderColor: '#475569' },
+  filterChipTxt:     { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  filterChipTxtSel:  { color: '#fff' },
+  filterCloseBtn:    { backgroundColor: '#475569', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  filterCloseBtnTxt: { fontSize: 15, fontWeight: '700', color: '#fff' },
   listCount:         { fontSize: 13, color: '#A0AEC0' },
   sortBtns:          { flexDirection: 'row', gap: 4 },
   sortBtn:           { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: '#F1F5F9' },
@@ -2019,7 +2113,7 @@ const s = StyleSheet.create({
 
   // 詳細シート
   detailOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  detailSheet:        { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10 },
+  detailSheet:        { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10 },
   detailHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 4 },
   detailTopRow:       { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
   detailEditBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#F1F5F9' },
