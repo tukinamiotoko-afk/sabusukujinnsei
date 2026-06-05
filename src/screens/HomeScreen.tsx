@@ -91,7 +91,11 @@ const blankForm = (): FormState => ({
 function ExpenseCard({ expense, onEdit, onDelete, onCardTap }: {
   expense: Expense; onEdit: () => void; onDelete: () => void; onCardTap: () => void;
 }) {
-  const { color, icon } = CAT[expense.category];
+  const { customCategories } = useCustomCategories();
+  const isCustom = expense.category === 'custom';
+  const customCat = isCustom ? customCategories.find(c => c.label === expense.customCategoryLabel) : null;
+  const color = customCat ? customCat.color : CAT[expense.category]?.color ?? '#718096';
+  const icon  = customCat ? 'bookmark-outline' : CAT[expense.category]?.icon ?? 'apps-outline';
   const days = daysUntil(expense.nextDate);
   const overdue = days < 0;
   const soon    = days >= 0 && days <= 7;
@@ -1714,6 +1718,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, setExpenses } = useExpenses();
   const { isPro, openPaywall } = usePro();
+  const { customCategories, categoryOrder } = useCustomCategories();
   const [adVisible, setAdVisible] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -1721,7 +1726,7 @@ export default function HomeScreen() {
   const [form, setForm]     = useState<FormState>(blankForm());
   const [sortKey, setSortKey] = useState<'date' | 'amountDesc' | 'amountAsc' | 'name'>('date');
   const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
-  const [filterCat, setFilterCat] = useState<'all' | 'subscription' | 'fixed'>('all');
+  const [filterCat, setFilterCat] = useState<string>('all');
   const [filterTiming, setFilterTiming] = useState<'all' | 'soon' | 'overdue'>('all');
   const [filterVisible, setFilterVisible] = useState(false);
 
@@ -1781,8 +1786,15 @@ export default function HomeScreen() {
 
   const activeFilterCount = (filterCat !== 'all' ? 1 : 0) + (filterTiming !== 'all' ? 1 : 0);
   const displayed = sorted.filter(exp => {
-    if (filterCat === 'subscription' && exp.category !== 'subscription') return false;
-    if (filterCat === 'fixed' && exp.category === 'subscription') return false;
+    if (filterCat !== 'all') {
+      const isBuiltinKey = CATEGORIES.includes(filterCat as never) && filterCat !== 'custom';
+      if (isBuiltinKey) {
+        if (exp.category !== filterCat) return false;
+      } else {
+        const customCat = customCategories.find(c => c.id === filterCat);
+        if (!customCat || exp.category !== 'custom' || exp.customCategoryLabel !== customCat.label) return false;
+      }
+    }
     const d = daysUntil(exp.nextDate);
     if (filterTiming === 'soon') return d >= 0 && d <= 7;
     if (filterTiming === 'overdue') return d < 0;
@@ -2114,18 +2126,34 @@ export default function HomeScreen() {
             </View>
 
             <Text style={s.filterSectionLabel}>カテゴリ</Text>
-            <View style={s.filterChipRow}>
-              {([['all','すべて'],['subscription','サブスク'],['fixed','固定費']] as ['all'|'subscription'|'fixed',string][]).map(([val, label]) => (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+              <View style={[s.filterChipRow, { flexWrap: 'nowrap' }]}>
                 <TouchableOpacity
-                  key={val}
-                  style={[s.filterChip, filterCat === val && s.filterChipSel]}
-                  onPress={() => setFilterCat(val)}
+                  style={[s.filterChip, filterCat === 'all' && s.filterChipSel]}
+                  onPress={() => setFilterCat('all')}
                   activeOpacity={0.75}
                 >
-                  <Text style={[s.filterChipTxt, filterCat === val && s.filterChipTxtSel]}>{label}</Text>
+                  <Text style={[s.filterChipTxt, filterCat === 'all' && s.filterChipTxtSel]}>すべて</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+                {categoryOrder.map(id => {
+                  const custom = customCategories.find(c => c.id === id);
+                  const label  = custom ? custom.label : CAT[id as Category]?.label ?? id;
+                  const isBuiltin = !custom && id !== 'custom';
+                  if (!custom && !isBuiltin) return null;
+                  const chipId = id;
+                  return (
+                    <TouchableOpacity
+                      key={chipId}
+                      style={[s.filterChip, filterCat === chipId && s.filterChipSel]}
+                      onPress={() => setFilterCat(chipId)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[s.filterChipTxt, filterCat === chipId && s.filterChipTxtSel]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
 
             <Text style={s.filterSectionLabel}>支払いタイミング</Text>
             <View style={s.filterChipRow}>
