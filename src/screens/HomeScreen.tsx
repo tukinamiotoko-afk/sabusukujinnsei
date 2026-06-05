@@ -47,6 +47,7 @@ import {
 import { TEMPLATES, SUBSCRIPTION_SUBCATS, getCancelUrl, getCancelSteps, getBillingUrl, type TemplateItem } from '../data/templates';
 import ServiceIcon, { hasServiceIcon } from '../components/ServiceIcon';
 import { usePro, FREE_LIMIT } from '../context/ProContext';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import InterstitialAdModal from '../components/InterstitialAdModal';
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
@@ -644,6 +645,7 @@ function ExpenseModal({
 }) {
   const { isPro, openPaywall } = usePro();
   const { expenses: allExpenses } = useExpenses();
+  const { customCategories, addCategory, reorder: reorderCats } = useCustomCategories();
 
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [tmplCat, setTmplCat]       = useState<Category | null>(null);
@@ -655,6 +657,51 @@ function ExpenseModal({
   const [dayInput, setDayInput] = useState('');
   const slideAnim               = useRef(new Animated.Value(SCREEN_W)).current;
   const paySlideAnim            = useRef(new Animated.Value(SCREEN_W)).current;
+
+  // カスタムカテゴリ追加
+  const [addCatInput, setAddCatInput] = useState('');
+  const [addCatVisible, setAddCatVisible] = useState(false);
+
+  // ドラッグ並び替え
+  const DRAG_H = 54;
+  const dragIdxRef  = useRef<number | null>(null);
+  const dropIdxRef  = useRef<number | null>(null);
+  const dragStartY  = useRef(0);
+  const dragOverlayY = useRef(new Animated.Value(0)).current;
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dropIdx, setDropIdx] = useState<number | null>(null);
+
+  const customCatPan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => dragIdxRef.current !== null,
+      onMoveShouldSetPanResponderCapture: () => dragIdxRef.current !== null,
+      onPanResponderMove: (e) => {
+        const idx = dragIdxRef.current;
+        if (idx === null) return;
+        const dy = e.nativeEvent.pageY - dragStartY.current;
+        const absY = idx * DRAG_H + dy;
+        dragOverlayY.setValue(absY);
+        const newDrop = Math.max(0, Math.min(customCategories.length - 1, Math.round(absY / DRAG_H)));
+        dropIdxRef.current = newDrop;
+        setDropIdx(newDrop);
+      },
+      onPanResponderRelease: () => {
+        const from = dragIdxRef.current;
+        const to   = dropIdxRef.current;
+        if (from !== null && to !== null && from !== to) reorderCats(from, to);
+        dragIdxRef.current = null;
+        dropIdxRef.current = null;
+        setDragIdx(null);
+        setDropIdx(null);
+      },
+      onPanResponderTerminate: () => {
+        dragIdxRef.current = null;
+        dropIdxRef.current = null;
+        setDragIdx(null);
+        setDropIdx(null);
+      },
+    })
+  ).current;
 
   // プラン選択ボトムシート
   const [billingItem, setBillingItem] = useState<{
@@ -1041,9 +1088,105 @@ function ExpenseModal({
                 <Ionicons name="chevron-back" size={22} color="#475569" />
               </TouchableOpacity>
               <Text style={s.catPanelTitle}>カテゴリを選択</Text>
-              <View style={{ width: 44 }} />
+              <TouchableOpacity
+                style={s.catPanelAddBtn}
+                onPress={() => { setAddCatVisible(v => !v); setAddCatInput(''); }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={addCatVisible ? 'close' : 'add'} size={22} color="#475569" />
+              </TouchableOpacity>
             </View>
+
+            {/* 新しいカテゴリを追加する入力欄 */}
+            {addCatVisible && (
+              <View style={s.addCatRow}>
+                <TextInput
+                  style={s.addCatInput}
+                  value={addCatInput}
+                  onChangeText={setAddCatInput}
+                  placeholder="カテゴリ名"
+                  placeholderTextColor="#CBD5E0"
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    if (addCatInput.trim()) { addCategory(addCatInput.trim()); setAddCatInput(''); setAddCatVisible(false); }
+                  }}
+                />
+                <TouchableOpacity
+                  style={[s.addCatConfirmBtn, !addCatInput.trim() && { opacity: 0.4 }]}
+                  onPress={() => {
+                    if (addCatInput.trim()) { addCategory(addCatInput.trim()); setAddCatInput(''); setAddCatVisible(false); }
+                  }}
+                  activeOpacity={0.7}
+                  disabled={!addCatInput.trim()}
+                >
+                  <Text style={s.addCatConfirmTxt}>追加</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <ScrollView keyboardShouldPersistTaps="handled">
+              {/* カスタムカテゴリ（ドラッグ並び替え対応） */}
+              {customCategories.length > 0 && (
+                <View style={{ position: 'relative' }} {...customCatPan.panHandlers}>
+                  {customCategories.map((cat, index) => {
+                    const isSelected = form.category === 'custom' && form.customCategoryLabel === cat.label;
+                    const isDragging = dragIdx === index;
+                    const isTarget   = dropIdx === index && dropIdx !== dragIdx;
+                    return (
+                      <Pressable
+                        key={cat.id}
+                        style={[
+                          s.catPanelRow,
+                          isSelected && s.catPanelRowSelected,
+                          isDragging && { opacity: 0.25 },
+                          isTarget   && { backgroundColor: '#EBF8FF' },
+                        ]}
+                        onPress={() => {
+                          if (dragIdx !== null) return;
+                          setForm(f => ({ ...f, category: 'custom', customCategoryLabel: cat.label }));
+                          closeCatPanel();
+                        }}
+                        onLongPress={(e) => {
+                          dragIdxRef.current = index;
+                          dropIdxRef.current = index;
+                          dragStartY.current = e.nativeEvent.pageY - index * DRAG_H;
+                          dragOverlayY.setValue(index * DRAG_H);
+                          setDragIdx(index);
+                          setDropIdx(index);
+                        }}
+                        delayLongPress={300}
+                      >
+                        <View style={[s.catPanelRowIcon, { backgroundColor: cat.color + '20' }]}>
+                          <Ionicons name="bookmark-outline" size={18} color={cat.color} />
+                        </View>
+                        <Text style={[s.catPanelRowText, isSelected && s.catPanelRowTextSel]}>{cat.label}</Text>
+                        {isSelected && <Ionicons name="checkmark" size={18} color="#475569" />}
+                        <Ionicons name="reorder-three-outline" size={22} color="#CBD5E0" style={{ marginLeft: 'auto' }} />
+                      </Pressable>
+                    );
+                  })}
+                  {/* ドラッグ中のフローティングアイテム */}
+                  {dragIdx !== null && customCategories[dragIdx] && (
+                    <Animated.View
+                      style={[s.catPanelRow, s.catDragOverlay, { transform: [{ translateY: dragOverlayY }] }]}
+                      pointerEvents="none"
+                    >
+                      <View style={[s.catPanelRowIcon, { backgroundColor: customCategories[dragIdx].color + '20' }]}>
+                        <Ionicons name="bookmark-outline" size={18} color={customCategories[dragIdx].color} />
+                      </View>
+                      <Text style={s.catPanelRowText}>{customCategories[dragIdx].label}</Text>
+                      <Ionicons name="reorder-three-outline" size={22} color="#94A3B8" style={{ marginLeft: 'auto' }} />
+                    </Animated.View>
+                  )}
+                </View>
+              )}
+
+              {customCategories.length > 0 && (
+                <View style={s.catPanelDivider} />
+              )}
+
+              {/* 組み込みカテゴリ */}
               {CATEGORIES.filter(cat => cat !== 'custom').map(cat => {
                 const { label, color, icon } = CAT[cat];
                 const sel = form.category === cat;
@@ -1065,20 +1208,6 @@ function ExpenseModal({
                   </TouchableOpacity>
                 );
               })}
-              <TouchableOpacity
-                style={[s.catPanelRow, form.category === 'custom' && s.catPanelRowSelected]}
-                onPress={() => {
-                  setForm(f => ({ ...f, category: 'custom' }));
-                  closeCatPanel();
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[s.catPanelRowIcon, { backgroundColor: '#71809620' }]}>
-                  <Ionicons name="create-outline" size={18} color="#718096" />
-                </View>
-                <Text style={[s.catPanelRowText, form.category === 'custom' && s.catPanelRowTextSel]}>カテゴリを追加する</Text>
-                {form.category === 'custom' && <Ionicons name="checkmark" size={18} color="#475569" />}
-              </TouchableOpacity>
             </ScrollView>
           </Animated.View>
         )}
@@ -2244,12 +2373,19 @@ const s = StyleSheet.create({
   // カテゴリスライドパネル
   catPanelHeader:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
   catPanelBackBtn:      { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  catPanelAddBtn:       { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   catPanelTitle:        { fontSize: 17, fontWeight: '700', color: '#1A202C' },
   catPanelRow:          { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F7FAFC', gap: 14 },
   catPanelRowSelected:  { backgroundColor: '#F3F4F6' },
   catPanelRowIcon:      { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   catPanelRowText:      { flex: 1, fontSize: 16, color: '#1A202C', fontWeight: '500' },
   catPanelRowTextSel:   { color: '#475569', fontWeight: '700' },
+  catDragOverlay:       { position: 'absolute', left: 0, right: 0, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8 },
+  catPanelDivider:      { height: 8, backgroundColor: '#F1F5F9' },
+  addCatRow:            { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },
+  addCatInput:          { flex: 1, fontSize: 15, color: '#1A202C', backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 9 },
+  addCatConfirmBtn:     { backgroundColor: '#475569', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 9 },
+  addCatConfirmTxt:     { fontSize: 14, fontWeight: '700', color: '#fff' },
 
   // クイック追加パネル
   qaServiceRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDF2F7' },

@@ -11,6 +11,7 @@ try { mobileAds = require('react-native-google-mobile-ads').default; } catch {}
 import { ExpensesProvider } from './src/context/ExpensesContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ProProvider } from './src/context/ProContext';
+import { CustomCategoriesProvider } from './src/context/CustomCategoriesContext';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PaywallScreen from './src/screens/PaywallScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
@@ -93,6 +94,7 @@ export default function App() {
         <OnboardingScreen onDone={finishOnboarding} />
       ) : (
         <ProProvider>
+          <CustomCategoriesProvider>
           <ExpensesProvider>
             <SettingsProvider>
               <NavigationContainer>
@@ -101,6 +103,7 @@ export default function App() {
               <PaywallScreen />
             </SettingsProvider>
           </ExpensesProvider>
+          </CustomCategoriesProvider>
         </ProProvider>
       )}
     </SafeAreaProvider>
