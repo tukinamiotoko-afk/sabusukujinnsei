@@ -1753,18 +1753,16 @@ export default function HomeScreen() {
       </LinearGradient>
 
       <View style={s.listHeaderWrap}>
-        <View style={s.listHeaderRow}>
-          <TouchableOpacity
-            style={[s.filterBtn, activeFilterCount > 0 && s.filterBtnActive]}
-            onPress={() => setFilterVisible(true)}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="funnel-outline" size={13} color={activeFilterCount > 0 ? '#fff' : '#64748B'} />
-            <Text style={[s.filterBtnTxt, activeFilterCount > 0 && s.filterBtnTxtActive]}>
-              絞り込み{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[s.filterBtn, activeFilterCount > 0 && s.filterBtnActive]}
+          onPress={() => setFilterVisible(true)}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="funnel-outline" size={13} color={activeFilterCount > 0 ? '#fff' : '#64748B'} />
+          <Text style={[s.filterBtnTxt, activeFilterCount > 0 && s.filterBtnTxtActive]}>
+            絞り込み{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+          </Text>
+        </TouchableOpacity>
         <View style={s.sortBtns}>
           {(['date','amountDesc','amountAsc','name'] as const).map(k => (
             <TouchableOpacity key={k} style={[s.sortBtn, sortKey === k && s.sortBtnActive]} onPress={() => setSortKey(k)}>
@@ -2058,7 +2056,7 @@ const s = StyleSheet.create({
   nextName:          { flex: 1, fontSize: 15, fontWeight: '700', color: '#1A202C' },
   nextDate:          { fontSize: 13, color: '#718096' },
   nextAmount:        { fontSize: 15, fontWeight: '800', color: '#475569', marginLeft: 8 },
-  listHeaderWrap:    { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 8 },
+  listHeaderWrap:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   listHeaderRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   listTitle:         { fontSize: 16, fontWeight: '700', color: '#1A202C' },
   filterBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 11, borderRadius: 20, backgroundColor: '#F1F5F9' },
