@@ -1076,7 +1076,7 @@ function ExpenseModal({
                 <View style={[s.catPanelRowIcon, { backgroundColor: '#71809620' }]}>
                   <Ionicons name="create-outline" size={18} color="#718096" />
                 </View>
-                <Text style={[s.catPanelRowText, form.category === 'custom' && s.catPanelRowTextSel]}>自由入力</Text>
+                <Text style={[s.catPanelRowText, form.category === 'custom' && s.catPanelRowTextSel]}>カテゴリを追加する</Text>
                 {form.category === 'custom' && <Ionicons name="checkmark" size={18} color="#475569" />}
               </TouchableOpacity>
             </ScrollView>
@@ -1405,16 +1405,6 @@ function ExpenseModal({
                   <View style={s.billingAmtSection}>
                     <View style={s.billingDayLabelRow}>
                       <Text style={s.qaDayPrompt}>支払日</Text>
-                      {getBillingUrl(groupName) && (
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(getBillingUrl(groupName)!)}
-                          activeOpacity={0.7}
-                          style={s.billingCheckBtn}
-                        >
-                          <Ionicons name="open-outline" size={12} color="#475569" />
-                          <Text style={s.billingCheckTxt}>支払日を確認する</Text>
-                        </TouchableOpacity>
-                      )}
                     </View>
                     {effectivePlan === 'monthly' ? (
                       <View style={[s.qaDayRow, { marginTop: 10 }]}>
