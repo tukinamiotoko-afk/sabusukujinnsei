@@ -1855,7 +1855,7 @@ export default function HomeScreen() {
       if (g.dy > 0) detailSheetY.setValue(g.dy);
     },
     onPanResponderRelease: (_, g) => {
-      if (g.dy > 80 || g.vy > 0.5) {
+      if (g.dy > SCREEN_H * 0.5 || g.vy > 1.5) {
         Animated.timing(detailSheetY, { toValue: SCREEN_H, duration: 250, useNativeDriver: true })
           .start(() => setDetailExpense(null));
       } else {
