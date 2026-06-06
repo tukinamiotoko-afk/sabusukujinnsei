@@ -2182,7 +2182,9 @@ export default function HomeScreen() {
             {...detailDragPan.panHandlers}
           >
             <Pressable style={[s.detailSheet, { maxHeight: SCREEN_H * 0.88 }]} onPress={() => {}}>
-              <View style={s.detailHandle} />
+              <TouchableOpacity onPress={() => closeDetailSheet()} activeOpacity={0.6} style={s.detailHandleTap}>
+                <View style={s.detailHandle} />
+              </TouchableOpacity>
               {detailExpense && (() => {
                 const { color, icon } = CAT[detailExpense.category];
                 const days   = daysUntil(detailExpense.nextDate);
@@ -2504,7 +2506,8 @@ const s = StyleSheet.create({
   // 詳細シート
   detailOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   detailSheet:        { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10 },
-  detailHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 4 },
+  detailHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center' },
+  detailHandleTap:    { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 10 },
   detailTopRow:       { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
   detailEditBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#F1F5F9' },
   detailEditTxt:      { fontSize: 13, fontWeight: '600', color: '#64748B' },
