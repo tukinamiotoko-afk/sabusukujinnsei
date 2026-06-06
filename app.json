@@ -15,7 +15,8 @@
       "bundleIdentifier": "com.sabusukujinnsei",
       "buildNumber": "1",
       "infoPlist": {
-        "NSUserNotificationUsageDescription": "支払い期限の通知を送るために使用します。"
+        "NSUserNotificationUsageDescription": "支払い期限の通知を送るために使用します。",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
