@@ -12,7 +12,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sabusukujinnsei"
+      "bundleIdentifier": "com.sabusukujinnsei",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSUserNotificationUsageDescription": "支払い期限の通知を送るために使用します。"
+      }
     },
     "android": {
       "icon": "./assets/icon.png",
