@@ -1013,12 +1013,11 @@ function ExpenseModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaProvider>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <SafeAreaView style={s.modalRoot} edges={['top']}>
+        <View style={[s.modalRoot, { paddingTop: insets.top }]}>
           {/* ヘッダ */}
           <View style={s.modalHeader}>
             {activeTab === 'template' && tmplCat !== null ? (
@@ -1093,7 +1092,7 @@ function ExpenseModal({
               />
             )}
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* カテゴリスライドパネル */}
         {catPanel && (
@@ -1732,7 +1731,6 @@ function ExpenseModal({
           </>
         )}
       </KeyboardAvoidingView>
-      </SafeAreaProvider>
     </Modal>
   );
 }

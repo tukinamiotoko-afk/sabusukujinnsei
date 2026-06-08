@@ -24,6 +24,10 @@
       "package": "com.sabusukujinnsei",
       "versionCode": 3
     },
+    "androidStatusBar": {
+      "translucent": false,
+      "backgroundColor": "#1B6B5A"
+    },
     "web": {
       "favicon": "./assets/icon.png"
     },
