@@ -21,10 +21,6 @@
     },
     "android": {
       "icon": "./assets/icon.png",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#1B6B5A"
-      },
       "package": "com.sabusukujinnsei",
       "versionCode": 2
     },
