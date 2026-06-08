@@ -659,6 +659,7 @@ function ExpenseModal({
   const { isPro, openPaywall } = usePro();
   const { expenses: allExpenses } = useExpenses();
   const { customCategories, categoryOrder, addCategory, reorder: reorderCats } = useCustomCategories();
+  const insets = useSafeAreaInsets();
 
   const [tab, setTab]           = useState<'template' | 'custom'>('template');
   const [tmplCat, setTmplCat]       = useState<Category | null>(null);
@@ -1015,7 +1016,7 @@ function ExpenseModal({
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={s.modalRoot}>
+        <View style={[s.modalRoot, { paddingTop: insets.top }]}>
           {/* ヘッダ */}
           <View style={s.modalHeader}>
             {activeTab === 'template' && tmplCat !== null ? (
