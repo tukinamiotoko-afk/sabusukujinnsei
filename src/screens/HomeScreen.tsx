@@ -9,6 +9,7 @@ import {
   TextInput,
   StyleSheet,
   Platform,
+  StatusBar,
   Alert,
   KeyboardAvoidingView,
   Animated,
@@ -1016,7 +1017,7 @@ function ExpenseModal({
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={[s.modalRoot, { paddingTop: insets.top }]}>
+        <View style={[s.modalRoot, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? insets.top) : insets.top }]}>
           {/* ヘッダ */}
           <View style={s.modalHeader}>
             {activeTab === 'template' && tmplCat !== null ? (
