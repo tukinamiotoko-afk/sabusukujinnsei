@@ -27,7 +27,7 @@ const SCREEN_H = Dimensions.get('window').height;
 const TMPL_CARD_W = Math.floor((SCREEN_W - 24 - 16) / 3);
 const SWIPE_ACTION_W   = 96;
 const SWIPE_THRESHOLD  = 44;
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -1013,11 +1013,12 @@ function ExpenseModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaProvider>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={[s.modalRoot, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? insets.top) : insets.top }]}>
+        <SafeAreaView style={s.modalRoot} edges={['top']}>
           {/* ヘッダ */}
           <View style={s.modalHeader}>
             {activeTab === 'template' && tmplCat !== null ? (
@@ -1092,7 +1093,7 @@ function ExpenseModal({
               />
             )}
           </View>
-        </View>
+        </SafeAreaView>
 
         {/* カテゴリスライドパネル */}
         {catPanel && (
@@ -1731,6 +1732,7 @@ function ExpenseModal({
           </>
         )}
       </KeyboardAvoidingView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
