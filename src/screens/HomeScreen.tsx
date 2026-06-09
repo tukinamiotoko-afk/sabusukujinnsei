@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import * as StoreReview from 'expo-store-review';
 import {
   View,
   Text,
@@ -2005,15 +2006,27 @@ export default function HomeScreen() {
       editId ? prev.map(e => e.id === editId ? exp : e) : [...prev, exp]
     );
     setModalVisible(false);
-    if (!editId && !isPro) {
-      addCountRef.current += 1;
-      if (addCountRef.current % 2 === 0) setAdVisible(true);
+    if (!editId) {
+      if (!isPro) {
+        addCountRef.current += 1;
+        if (addCountRef.current % 2 === 0) setAdVisible(true);
+      }
+      AsyncStorage.getItem('review_add_count').then(v => {
+        const n = parseInt(v ?? '0', 10) + 1;
+        AsyncStorage.setItem('review_add_count', String(n));
+        if (n === 3) StoreReview.isAvailableAsync().then(ok => { if (ok) StoreReview.requestReview(); });
+      });
     }
   };
 
   const handleQuickAdd = (exp: Expense) => {
     setExpenses(prev => [...prev, exp]);
     setModalVisible(false);
+    AsyncStorage.getItem('review_add_count').then(v => {
+      const n = parseInt(v ?? '0', 10) + 1;
+      AsyncStorage.setItem('review_add_count', String(n));
+      if (n === 3) StoreReview.isAvailableAsync().then(ok => { if (ok) StoreReview.requestReview(); });
+    });
     if (!isPro) {
       addCountRef.current += 1;
       if (addCountRef.current % 2 === 0) setAdVisible(true);
