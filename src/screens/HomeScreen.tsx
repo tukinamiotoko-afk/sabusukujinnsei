@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import * as StoreReview from 'expo-store-review';
 import {
   View,
   Text,
