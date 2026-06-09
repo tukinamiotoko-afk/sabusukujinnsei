@@ -26,8 +26,7 @@
         "backgroundColor": "#1B6B5A"
       },
       "package": "com.sabusukujinnsei",
-      "versionCode": 7,
-      "permissions": ["com.android.vending.BILLING"]
+      "versionCode": 8
     },
     "androidStatusBar": {
       "translucent": false,
@@ -37,6 +36,7 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
+      "./plugins/withBillingPermission",
       [
         "expo-notifications",
         {
