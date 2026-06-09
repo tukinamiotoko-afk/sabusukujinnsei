@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import Purchases, { LOG_LEVEL, PurchasesPackage } from 'react-native-purchases';
+import type { CustomerInfo } from 'react-native-purchases';
 
 export const FREE_LIMIT = 5;
 
@@ -53,6 +54,12 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       setMonthlyPackage(current.monthly ?? null);
       setLifetimePackage(current.lifetime ?? null);
     }).catch(() => {});
+
+    const removeListener = Purchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
+      setIsPro(info.entitlements.active[RC_ENTITLEMENT] !== undefined);
+    });
+
+    return () => { removeListener(); };
   }, []);
 
   const purchase = async (pkg: PurchasesPackage) => {
