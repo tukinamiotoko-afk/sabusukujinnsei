@@ -26,7 +26,8 @@
         "backgroundColor": "#1B6B5A"
       },
       "package": "com.sabusukujinnsei",
-      "versionCode": 6
+      "versionCode": 7,
+      "permissions": ["com.android.vending.BILLING"]
     },
     "androidStatusBar": {
       "translucent": false,
