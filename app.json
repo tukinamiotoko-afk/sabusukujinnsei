@@ -26,7 +26,7 @@
         "backgroundColor": "#1B6B5A"
       },
       "package": "com.sabusukujinnsei",
-      "versionCode": 3
+      "versionCode": 4
     },
     "androidStatusBar": {
       "translucent": false,
