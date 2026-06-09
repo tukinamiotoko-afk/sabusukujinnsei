@@ -1,15 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import Purchases, { LOG_LEVEL, PurchasesPackage } from 'react-native-purchases';
 
-// ─── 設定 ─────────────────────────────────────────────────────────────────────
-export const FREE_LIMIT = 5; // 無料ユーザーの登録上限
-const STORAGE_KEY = 'pro_status_v2';
+export const FREE_LIMIT = 5;
 
-// ─── RevenueCat への差し替えポイント ──────────────────────────────────────────
-// import Purchases, { LOG_LEVEL } from 'react-native-purchases';
-// Purchases.configure({ apiKey: Platform.OS === 'ios' ? 'appl_XXXXX' : 'goog_XXXXX' });
-// export const RC_MONTHLY_ID  = 'pro_monthly_200';
-// export const RC_LIFETIME_ID = 'pro_lifetime_800';
+const RC_API_KEY_ANDROID = 'goog_qbcvEHtHIsnsRMoeCzgmzgyZIPU';
+const RC_API_KEY_IOS     = '';  // iOS実装時に設定
+export const RC_ENTITLEMENT = 'pro';
 
 export type PurchaseType = 'monthly' | 'lifetime';
 
@@ -17,56 +14,62 @@ interface ProContextType {
   isPro: boolean;
   isLoading: boolean;
   paywallVisible: boolean;
+  monthlyPackage: PurchasesPackage | null;
+  lifetimePackage: PurchasesPackage | null;
   openPaywall: () => void;
   closePaywall: () => void;
-  purchase: (type: PurchaseType) => Promise<void>;
+  purchase: (pkg: PurchasesPackage) => Promise<void>;
   restorePurchases: () => Promise<void>;
 }
 
 const ProContext = createContext<ProContextType>({
   isPro: false, isLoading: true, paywallVisible: false,
+  monthlyPackage: null, lifetimePackage: null,
   openPaywall: () => {}, closePaywall: () => {},
   purchase: async () => {}, restorePurchases: async () => {},
 });
 
 export function ProProvider({ children }: { children: React.ReactNode }) {
-  const [isPro, setIsPro] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isPro, setIsPro]                   = useState(false);
+  const [isLoading, setIsLoading]           = useState(true);
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
+  const [lifetimePackage, setLifetimePackage] = useState<PurchasesPackage | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(v => {
-      if (v === 'true') setIsPro(true);
-      setIsLoading(false);
-    });
+    const apiKey = Platform.OS === 'ios' ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
+    if (!apiKey) { setIsLoading(false); return; }
+
+    Purchases.setLogLevel(LOG_LEVEL.ERROR);
+    Purchases.configure({ apiKey });
+
+    Purchases.getCustomerInfo().then(info => {
+      setIsPro(info.entitlements.active[RC_ENTITLEMENT] !== undefined);
+    }).catch(() => {}).finally(() => setIsLoading(false));
+
+    Purchases.getOfferings().then(offerings => {
+      const current = offerings.current;
+      if (!current) return;
+      setMonthlyPackage(current.monthly ?? null);
+      setLifetimePackage(current.lifetime ?? null);
+    }).catch(() => {});
   }, []);
 
-  const purchase = async (type: PurchaseType) => {
-    // ── RevenueCat 実装時はここを置き換える ──────────────────────────────────
-    // const offerings = await Purchases.getOfferings();
-    // const pkg = type === 'monthly'
-    //   ? offerings.current?.monthly
-    //   : offerings.current?.lifetime;
-    // if (!pkg) throw new Error('Package not found');
-    // await Purchases.purchasePackage(pkg);
-    // ─────────────────────────────────────────────────────────────────────────
-    await AsyncStorage.setItem(STORAGE_KEY, 'true'); // スタブ
-    setIsPro(true);
+  const purchase = async (pkg: PurchasesPackage) => {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    setIsPro(customerInfo.entitlements.active[RC_ENTITLEMENT] !== undefined);
     setPaywallVisible(false);
   };
 
   const restorePurchases = async () => {
-    // ── RevenueCat 実装時はここを置き換える ──────────────────────────────────
-    // const info = await Purchases.restorePurchases();
-    // setIsPro(info.entitlements.active['pro'] !== undefined);
-    // ─────────────────────────────────────────────────────────────────────────
-    const v = await AsyncStorage.getItem(STORAGE_KEY);
-    setIsPro(v === 'true');
+    const info = await Purchases.restorePurchases();
+    setIsPro(info.entitlements.active[RC_ENTITLEMENT] !== undefined);
   };
 
   return (
     <ProContext.Provider value={{
       isPro, isLoading, paywallVisible,
+      monthlyPackage, lifetimePackage,
       openPaywall:  () => setPaywallVisible(true),
       closePaywall: () => setPaywallVisible(false),
       purchase, restorePurchases,

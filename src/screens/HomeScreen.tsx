@@ -22,6 +22,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as StoreReview from 'expo-store-review';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -2031,6 +2032,11 @@ export default function HomeScreen() {
       addCountRef.current += 1;
       if (addCountRef.current % 2 === 0) setAdVisible(true);
     }
+    AsyncStorage.getItem('review_add_count').then(v => {
+      const n = parseInt(v ?? '0', 10) + 1;
+      AsyncStorage.setItem('review_add_count', String(n));
+      if (n === 3) StoreReview.isAvailableAsync().then(ok => { if (ok) StoreReview.requestReview(); });
+    });
   };
 
   const handleDelete = (id: string) => {

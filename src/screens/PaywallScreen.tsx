@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { usePro, FREE_LIMIT, type PurchaseType } from '../context/ProContext';
+import { usePro, FREE_LIMIT } from '../context/ProContext';
+import type { PurchasesPackage } from 'react-native-purchases';
 
 const FEATURES = [
   { label: '登録件数',      free: `最大${FREE_LIMIT}件`, pro: '無制限' },
@@ -15,14 +16,21 @@ const FEATURES = [
 
 export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
-  const { paywallVisible, closePaywall, purchase, restorePurchases, isPro } = usePro();
-  const [selectedPlan, setSelectedPlan] = useState<PurchaseType>('monthly');
+  const { paywallVisible, closePaywall, purchase, restorePurchases, monthlyPackage, lifetimePackage } = usePro();
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'lifetime'>('monthly');
   const [loading, setLoading] = useState(false);
 
+  const selectedPackage: PurchasesPackage | null =
+    selectedPlan === 'monthly' ? monthlyPackage : lifetimePackage;
+
   const handlePurchase = async () => {
+    if (!selectedPackage) {
+      Alert.alert('エラー', '商品情報を読み込めませんでした。しばらくしてから再試行してください。');
+      return;
+    }
     setLoading(true);
     try {
-      await purchase(selectedPlan);
+      await purchase(selectedPackage);
     } catch {
       Alert.alert('エラー', '購入処理に失敗しました。再度お試しください。');
     } finally {
@@ -95,7 +103,9 @@ export default function PaywallScreen() {
                 <Text style={[c.planNote, selectedPlan === 'monthly' && c.planNoteSel]}>いつでも解約可能</Text>
               </View>
               <View style={c.planRight}>
-                <Text style={[c.planPrice, selectedPlan === 'monthly' && c.planPriceSel]}>¥200</Text>
+                <Text style={[c.planPrice, selectedPlan === 'monthly' && c.planPriceSel]}>
+                  {monthlyPackage?.product.priceString ?? '---'}
+                </Text>
                 <Text style={[c.planPer, selectedPlan === 'monthly' && c.planPerSel]}>/月</Text>
               </View>
               {selectedPlan === 'monthly' && (
@@ -116,7 +126,9 @@ export default function PaywallScreen() {
                 <Text style={[c.planNote, selectedPlan === 'lifetime' && c.planNoteSel]}>一度払えば永久にプロ</Text>
               </View>
               <View style={c.planRight}>
-                <Text style={[c.planPrice, selectedPlan === 'lifetime' && c.planPriceSel]}>¥800</Text>
+                <Text style={[c.planPrice, selectedPlan === 'lifetime' && c.planPriceSel]}>
+                  {lifetimePackage?.product.priceString ?? '---'}
+                </Text>
                 <Text style={[c.planPer, selectedPlan === 'lifetime' && c.planPerSel]}>買い切り</Text>
               </View>
               {selectedPlan === 'lifetime' && (
@@ -135,7 +147,11 @@ export default function PaywallScreen() {
             {loading
               ? <ActivityIndicator color="#fff" />
               : <Text style={c.buyTxt}>
-                  {selectedPlan === 'monthly' ? '¥200/月 で始める' : '¥800 で購入する'}
+                  {selectedPackage
+                    ? (selectedPlan === 'monthly'
+                        ? `${selectedPackage.product.priceString}/月 で始める`
+                        : `${selectedPackage.product.priceString} で購入する`)
+                    : '読み込み中...'}
                 </Text>
             }
           </TouchableOpacity>
