@@ -115,17 +115,17 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
   useEffect(() => {
     if (!isNew) return;
     const t = setTimeout(() => {
-      Animated.stagger(70, [
-        Animated.timing(a0, { toValue: 1, duration: 280, useNativeDriver: true }),
-        Animated.timing(a1, { toValue: 1, duration: 280, useNativeDriver: true }),
-        Animated.timing(a2, { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.stagger(120, [
+        Animated.timing(a0, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(a1, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(a2, { toValue: 1, duration: 400, useNativeDriver: true }),
       ]).start();
     }, 350);
     return () => clearTimeout(t);
   }, []);
   const mkStyle = (a: Animated.Value) => ({
     opacity: a,
-    transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }],
+    transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
   });
 
   const translateX = useRef(new Animated.Value(0)).current;
