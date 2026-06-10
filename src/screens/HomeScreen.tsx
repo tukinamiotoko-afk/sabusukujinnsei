@@ -257,7 +257,7 @@ function StaggerItem({ index, total, children }: { index: number; total: number;
     <Animated.View style={{
       opacity: anim,
       transform: [
-        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) },
+        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
         { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
       ],
     }}>
