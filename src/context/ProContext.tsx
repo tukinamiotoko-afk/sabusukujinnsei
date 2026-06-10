@@ -28,7 +28,7 @@ const MOCK_MONTHLY: PurchasesPackage = {
 } as any;
 
 const MOCK_LIFETIME: PurchasesPackage = {
-  product: { priceString: '¥800', price: 800 } as any,
+  product: { priceString: '¥900', price: 900 } as any,
   packageType: 'LIFETIME',
 } as any;
 
