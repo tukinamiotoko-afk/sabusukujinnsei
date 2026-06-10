@@ -248,7 +248,7 @@ function StaggerItem({ index, total, children }: { index: number; total: number;
   const anim = useRef(new Animated.Value(skip ? 1 : 0)).current;
   useEffect(() => {
     if (skip) return;
-    const delay = (Math.min(total, STAGGER_VISIBLE_MAX) - 1 - index) * 20;
+    const delay = Math.min(index, STAGGER_VISIBLE_MAX - 1) * 20;
     const t = setTimeout(() => {
       Animated.timing(anim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     }, delay);
