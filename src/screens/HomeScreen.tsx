@@ -19,7 +19,6 @@ import {
   PanResponder,
   BackHandler,
   LayoutChangeEvent,
-  InteractionManager,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StoreReview from 'expo-store-review';
@@ -93,9 +92,9 @@ const blankForm = (): FormState => ({
 
 // ─── ExpenseCard ─────────────────────────────────────────────────────────────
 
-function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayout }: {
+function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayout, isNew }: {
   expense: Expense; onEdit: () => void; onDelete: () => void; onCardTap: () => void;
-  reorderMode?: boolean; onLayout?: (e: LayoutChangeEvent) => void;
+  reorderMode?: boolean; onLayout?: (e: LayoutChangeEvent) => void; isNew?: boolean;
 }) {
   const { customCategories } = useCustomCategories();
   const isCustom = expense.category === 'custom';
@@ -108,6 +107,26 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
   const isSubscription = expense.category === 'subscription';
   const reorderModeRef = useRef(false);
   reorderModeRef.current = reorderMode ?? false;
+
+  // 追加時の要素スタガーアニメーション
+  const a0 = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  const a1 = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  const a2 = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  useEffect(() => {
+    if (!isNew) return;
+    const t = setTimeout(() => {
+      Animated.stagger(70, [
+        Animated.timing(a0, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.timing(a1, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.timing(a2, { toValue: 1, duration: 280, useNativeDriver: true }),
+      ]).start();
+    }, 350);
+    return () => clearTimeout(t);
+  }, []);
+  const mkStyle = (a: Animated.Value) => ({
+    opacity: a,
+    transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }],
+  });
 
   const translateX = useRef(new Animated.Value(0)).current;
   const openDir    = useRef<'none' | 'left' | 'right'>('none');
@@ -177,31 +196,33 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
       )}
       <Animated.View style={{ transform: [{ translateX: reorderMode ? new Animated.Value(0) : translateX }] }} {...(!reorderMode ? panResponder.panHandlers : {})}>
         <TouchableOpacity style={s.card} onPress={reorderMode ? undefined : handleCardPress} activeOpacity={reorderMode ? 1 : 0.75}>
-          {hasServiceIcon(expense.name)
-            ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
-            : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
-                <Ionicons name={icon as never} size={22} color={color} />
-              </View>
-          }
-          <View style={s.cardBody}>
+          <Animated.View style={mkStyle(a0)}>
+            {hasServiceIcon(expense.name)
+              ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
+              : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
+                  <Ionicons name={icon as never} size={22} color={color} />
+                </View>
+            }
+          </Animated.View>
+          <Animated.View style={[s.cardBody, mkStyle(a1)]}>
             <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
             <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
               {fmtDate(expense.nextDate)}
               {'  '}
               {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
             </Text>
-          </View>
+          </Animated.View>
           {reorderMode ? (
             <View style={{ paddingLeft: 12, paddingRight: 4 }}>
               <Ionicons name="reorder-three-outline" size={26} color="#94A3B8" />
             </View>
           ) : (
-            <View style={s.cardRight}>
+            <Animated.View style={[s.cardRight, mkStyle(a2)]}>
               {expense.category !== 'subscription' && (
                 <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
               )}
               <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
-            </View>
+            </Animated.View>
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -210,33 +231,10 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
 }
 
 
-// ─── 追加アニメーション付きカード ────────────────────────────────────────────
+// ─── 追加アニメーション付きカード（内部要素スタガー） ────────────────────────
 
 function AnimatedExpenseCard({ isNew, ...props }: { isNew: boolean } & React.ComponentProps<typeof ExpenseCard>) {
-  const anim = useRef(new Animated.Value(isNew ? 0 : 1)).current;
-
-  useEffect(() => {
-    if (!isNew) return;
-    // モーダルなど進行中のアニメーションが全て終わってから再生
-    const task = InteractionManager.runAfterInteractions(() => {
-      Animated.timing(anim, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: true,
-      }).start();
-    });
-    return () => task.cancel();
-  }, []);
-
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
-  const opacity    = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.6, 1] });
-
-  return (
-    <Animated.View style={{ transform: [{ translateY }], opacity }}>
-      <ExpenseCard {...props} />
-    </Animated.View>
-  );
+  return <ExpenseCard isNew={isNew} {...props} />;
 }
 
 // ─── テンプレートブラウザ ─────────────────────────────────────────────────────
