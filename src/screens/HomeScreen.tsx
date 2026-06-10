@@ -185,11 +185,16 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
           }
           <View style={s.cardBody}>
             <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
-            <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
-              {fmtDate(expense.nextDate)}
-              {'  '}
-              {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
-            </Text>
+            <View style={s.cardDateRow}>
+              <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
+                {fmtDate(expense.nextDate)}
+                {'  '}
+                {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
+              </Text>
+              <View style={s.cyclePill}>
+                <Text style={s.cyclePillTxt}>{cycleDisplay(expense.cycle, expense.customCycleDays)}</Text>
+              </View>
+            </View>
           </View>
           {reorderMode ? (
             <View style={{ paddingLeft: 12, paddingRight: 4 }}>
@@ -2577,6 +2582,9 @@ const s = StyleSheet.create({
   cycleBadge:        { fontSize: 11, color: '#A0AEC0', fontWeight: '500' },
   cardName:          { fontSize: 15, fontWeight: '700', color: '#1A202C' },
   cardDate:          { fontSize: 12, color: '#718096' },
+  cardDateRow:       { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cyclePill:         { backgroundColor: '#F1F5F9', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  cyclePillTxt:      { fontSize: 10, fontWeight: '700', color: '#64748B' },
   cardMemo:          { fontSize: 11, color: '#A0AEC0' },
   cancelBtn:         { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2, alignSelf: 'flex-start' },
   cancelBtnText:     { fontSize: 11, color: '#A0AEC0' },
