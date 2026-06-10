@@ -19,7 +19,12 @@
     },
     "android": {
       "icon": "./assets/icon.png",
-      "package": "com.sabusukujinnsei"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.sabusukujinnsei",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/icon.png"
