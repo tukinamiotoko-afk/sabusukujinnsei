@@ -26,7 +26,7 @@ import * as StoreReview from 'expo-store-review';
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 const TMPL_CARD_W = Math.floor((SCREEN_W - 24 - 16) / 3);
-const TMPL_CARD_H = Math.floor((SCREEN_H - 310) / 4); // ヘッダー等を除いた残り高さ÷4行
+const TMPL_CARD_H = Math.floor((SCREEN_H - 360) / 4); // ヘッダー等を除いた残り高さ÷4行
 const SWIPE_ACTION_W   = 96;
 const SWIPE_THRESHOLD  = 44;
 import { useSafeAreaInsets, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
