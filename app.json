@@ -24,7 +24,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.sabusukujinnsei",
-      "versionCode": 1
+      "versionCode": 10
     },
     "web": {
       "favicon": "./assets/icon.png"
