@@ -83,7 +83,6 @@ export default function SettingsScreen() {
           <Text style={c.sectionTitle}>プロプラン</Text>
           {isPro ? (
             <View style={c.proRow}>
-              <View style={c.proIcon}><Ionicons name="star" size={20} color="#475569" /></View>
               <View style={c.rowText}>
                 <Text style={c.rowLabel}>プロプラン 契約中</Text>
                 <Text style={c.rowSub}>広告なし・登録無制限</Text>
@@ -91,7 +90,6 @@ export default function SettingsScreen() {
             </View>
           ) : (
             <TouchableOpacity style={c.upgradeBtn} onPress={openPaywall} activeOpacity={0.85}>
-              <View style={c.proIcon}><Ionicons name="star-outline" size={20} color="#fff" /></View>
               <View style={c.rowText}>
                 <Text style={c.upgradeBtnTitle}>プロにアップグレード</Text>
                 <Text style={c.upgradeBtnSub}>
