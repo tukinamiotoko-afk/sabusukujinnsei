@@ -92,9 +92,9 @@ const blankForm = (): FormState => ({
 
 // ─── ExpenseCard ─────────────────────────────────────────────────────────────
 
-function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayout, isNew }: {
+function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayout }: {
   expense: Expense; onEdit: () => void; onDelete: () => void; onCardTap: () => void;
-  reorderMode?: boolean; onLayout?: (e: LayoutChangeEvent) => void; isNew?: boolean;
+  reorderMode?: boolean; onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const { customCategories } = useCustomCategories();
   const isCustom = expense.category === 'custom';
@@ -108,25 +108,6 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
   const reorderModeRef = useRef(false);
   reorderModeRef.current = reorderMode ?? false;
 
-  // 追加時の要素スタガーアニメーション
-  const a0 = useRef(new Animated.Value(isNew ? 0 : 1)).current;
-  const a1 = useRef(new Animated.Value(isNew ? 0 : 1)).current;
-  const a2 = useRef(new Animated.Value(isNew ? 0 : 1)).current;
-  useEffect(() => {
-    if (!isNew) return;
-    const t = setTimeout(() => {
-      Animated.stagger(120, [
-        Animated.timing(a0, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(a1, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(a2, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]).start();
-    }, 350);
-    return () => clearTimeout(t);
-  }, []);
-  const mkStyle = (a: Animated.Value) => ({
-    opacity: a,
-    transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
-  });
 
   const translateX = useRef(new Animated.Value(0)).current;
   const openDir    = useRef<'none' | 'left' | 'right'>('none');
@@ -196,33 +177,31 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
       )}
       <Animated.View style={{ transform: [{ translateX: reorderMode ? new Animated.Value(0) : translateX }] }} {...(!reorderMode ? panResponder.panHandlers : {})}>
         <TouchableOpacity style={s.card} onPress={reorderMode ? undefined : handleCardPress} activeOpacity={reorderMode ? 1 : 0.75}>
-          <Animated.View style={mkStyle(a0)}>
-            {hasServiceIcon(expense.name)
-              ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
-              : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
-                  <Ionicons name={icon as never} size={22} color={color} />
-                </View>
-            }
-          </Animated.View>
-          <Animated.View style={[s.cardBody, mkStyle(a1)]}>
+          {hasServiceIcon(expense.name)
+            ? <View style={{ marginRight: 12 }}><ServiceIcon name={expense.name} size={46} /></View>
+            : <View style={[s.cardIcon, { backgroundColor: color + '20' }]}>
+                <Ionicons name={icon as never} size={22} color={color} />
+              </View>
+          }
+          <View style={s.cardBody}>
             <Text style={s.cardName} numberOfLines={1}>{expense.name}</Text>
             <Text style={[s.cardDate, overdue && s.textRed, soon && !overdue && s.textOrange]}>
               {fmtDate(expense.nextDate)}
               {'  '}
               {overdue ? `(${Math.abs(days)}日超過)` : days === 0 ? '(今日)' : days <= 7 ? `(あと${days}日)` : ''}
             </Text>
-          </Animated.View>
+          </View>
           {reorderMode ? (
             <View style={{ paddingLeft: 12, paddingRight: 4 }}>
               <Ionicons name="reorder-three-outline" size={26} color="#94A3B8" />
             </View>
           ) : (
-            <Animated.View style={[s.cardRight, mkStyle(a2)]}>
+            <View style={s.cardRight}>
               {expense.category !== 'subscription' && (
                 <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
               )}
               <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
-            </Animated.View>
+            </View>
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -1860,6 +1839,19 @@ export default function HomeScreen() {
   const [adVisible, setAdVisible] = useState(false);
 
   const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
+  const newCardAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!newlyAddedId) return;
+    newCardAnim.setValue(0);
+    const t = setTimeout(() => {
+      Animated.timing(newCardAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [newlyAddedId]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<FormState>(blankForm());
@@ -2186,16 +2178,23 @@ export default function HomeScreen() {
                 if (cDragIdx < cDropIdx && index > cDragIdx && index <= cDropIdx) shiftY = -CARD_ITEM_H;
                 else if (cDragIdx > cDropIdx && index >= cDropIdx && index < cDragIdx) shiftY = CARD_ITEM_H;
               }
+              const isNewCard = exp.id === newlyAddedId;
               return (
                 <Animated.View
                   key={exp.id}
                   style={[
-                    { transform: [{ translateY: shiftY }] },
+                    {
+                      transform: [
+                        { translateY: shiftY },
+                        { translateY: isNewCard ? newCardAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) : 0 },
+                      ],
+                      opacity: isNewCard ? newCardAnim : 1,
+                    },
                     isDragging && { opacity: 0 },
                   ]}
                 >
                   <AnimatedExpenseCard
-                    isNew={exp.id === newlyAddedId}
+                    isNew={false}
                     expense={exp}
                     onEdit={() => openEdit(exp)}
                     onDelete={() => handleDelete(exp.id)}
