@@ -66,9 +66,7 @@ export default function PaywallScreen() {
         <ScrollView contentContainerStyle={[c.scroll, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
           {/* ヘッダー */}
           <View style={c.hero}>
-            <View style={c.crownWrap}>
-              <Ionicons name="star" size={40} color="#475569" />
-            </View>
+
             <Text style={c.heroTitle}>プロプランにアップグレード</Text>
             <Text style={c.heroSub}>広告なし・登録無制限で、すべての機能をフル活用</Text>
           </View>
