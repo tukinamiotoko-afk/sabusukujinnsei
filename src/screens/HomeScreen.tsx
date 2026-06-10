@@ -239,18 +239,19 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
 
 // ─── スタガーアイテム ─────────────────────────────────────────────────────────
 
-function StaggerItem({ index, children }: { index: number; children: React.ReactNode }) {
+function StaggerItem({ index, total, children }: { index: number; total: number; children: React.ReactNode }) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    const delay = (total - 1 - index) * 35;
     const t = setTimeout(() => {
-      Animated.timing(anim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
-    }, index * 60);
+      Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    }, delay);
     return () => clearTimeout(t);
   }, []);
   return (
     <Animated.View style={{
       opacity: anim,
-      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
     }}>
       {children}
     </Animated.View>
@@ -440,14 +441,16 @@ function TemplateBrowser({
           {plans.map((item, i) => {
             const label = item.planName ?? item.name;
             return (
-              <TouchableOpacity key={i} style={s.tmplGridCard}
-                onPress={() => handleCardTap(activeCategory, item)} activeOpacity={0.75}>
-                <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
-                  <Ionicons name={icon as never} size={22} color={color} />
-                </View>
-                <Text style={s.tmplGridName} numberOfLines={2}>{label}</Text>
-                {renderGridBilling(item)}
-              </TouchableOpacity>
+              <StaggerItem key={i} index={i} total={plans.length}>
+                <TouchableOpacity style={s.tmplGridCard}
+                  onPress={() => handleCardTap(activeCategory, item)} activeOpacity={0.75}>
+                  <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                    <Ionicons name={icon as never} size={22} color={color} />
+                  </View>
+                  <Text style={s.tmplGridName} numberOfLines={2}>{label}</Text>
+                  {renderGridBilling(item)}
+                </TouchableOpacity>
+              </StaggerItem>
             );
           })}
         </ScrollView>
@@ -469,34 +472,38 @@ function TemplateBrowser({
           {entries.map((entry, i) => {
             if (entry.type === 'group') {
               return (
-                <TouchableOpacity key={i} style={s.tmplGridCard}
-                  onPress={() => {
-                    const hasLocal = entry.items.some(p => (p.amount !== undefined && p.currency !== 'USD') || p.yearlyAmount !== undefined);
-                    if (hasLocal && activeCategory) { onGroupBillingOpen(activeCategory, entry.items); }
-                    else { setActiveGroup(entry.key); }
-                  }} activeOpacity={0.75}>
-                  {hasServiceIcon(entry.key)
-                    ? <ServiceIcon name={entry.key} size={40} />
-                    : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
-                        <Ionicons name={icon as never} size={22} color={color} />
-                      </View>}
-                  <Text style={s.tmplGridName} numberOfLines={2}>{entry.key}</Text>
-                  <Text style={s.tmplGridMeta}>{entry.items.length}プラン</Text>
-                </TouchableOpacity>
+                <StaggerItem key={i} index={i} total={entries.length}>
+                  <TouchableOpacity style={s.tmplGridCard}
+                    onPress={() => {
+                      const hasLocal = entry.items.some(p => (p.amount !== undefined && p.currency !== 'USD') || p.yearlyAmount !== undefined);
+                      if (hasLocal && activeCategory) { onGroupBillingOpen(activeCategory, entry.items); }
+                      else { setActiveGroup(entry.key); }
+                    }} activeOpacity={0.75}>
+                    {hasServiceIcon(entry.key)
+                      ? <ServiceIcon name={entry.key} size={40} />
+                      : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                          <Ionicons name={icon as never} size={22} color={color} />
+                        </View>}
+                    <Text style={s.tmplGridName} numberOfLines={2}>{entry.key}</Text>
+                    <Text style={s.tmplGridMeta}>{entry.items.length}プラン</Text>
+                  </TouchableOpacity>
+                </StaggerItem>
               );
             }
             const item = entry.item;
             return (
-              <TouchableOpacity key={i} style={s.tmplGridCard}
-                onPress={() => handleCardTap(activeCategory, item)} activeOpacity={0.7}>
-                {hasServiceIcon(item.name)
-                  ? <ServiceIcon name={item.name} size={40} />
-                  : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
-                      <Ionicons name={icon as never} size={22} color={color} />
-                    </View>}
-                <Text style={s.tmplGridName} numberOfLines={2}>{item.name}</Text>
-                {renderGridBilling(item)}
-              </TouchableOpacity>
+              <StaggerItem key={i} index={i} total={entries.length}>
+                <TouchableOpacity style={s.tmplGridCard}
+                  onPress={() => handleCardTap(activeCategory, item)} activeOpacity={0.7}>
+                  {hasServiceIcon(item.name)
+                    ? <ServiceIcon name={item.name} size={40} />
+                    : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                        <Ionicons name={icon as never} size={22} color={color} />
+                      </View>}
+                  <Text style={s.tmplGridName} numberOfLines={2}>{item.name}</Text>
+                  {renderGridBilling(item)}
+                </TouchableOpacity>
+              </StaggerItem>
             );
           })}
         </ScrollView>
@@ -506,21 +513,24 @@ function TemplateBrowser({
 
   // Level 1.5: サブスク サブカテゴリ
   if (activeCategory === 'subscription') {
+    const subcatEntries = Object.entries(SUBSCRIPTION_SUBCATS);
     return (
       <View style={{ flex: 1 }}>
         {renderSearchBar(false)}
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
-          {Object.entries(SUBSCRIPTION_SUBCATS).map(([key, cfg]) => {
+          {subcatEntries.map(([key, cfg], i) => {
             const count = TEMPLATES['subscription'].filter(i => i.subcat === key).length;
             return (
-              <TouchableOpacity key={key} style={s.tmplGridCard}
-                onPress={() => setActiveSubcat(key)} activeOpacity={0.75}>
-                <View style={[s.tmplGridIcon, { backgroundColor: cfg.color + '20' }]}>
-                  <Ionicons name={cfg.icon as never} size={22} color={cfg.color} />
-                </View>
-                <Text style={s.tmplGridName}>{cfg.label}</Text>
-                <Text style={s.tmplGridMeta}>{count}件</Text>
-              </TouchableOpacity>
+              <StaggerItem key={key} index={i} total={subcatEntries.length}>
+                <TouchableOpacity style={s.tmplGridCard}
+                  onPress={() => setActiveSubcat(key)} activeOpacity={0.75}>
+                  <View style={[s.tmplGridIcon, { backgroundColor: cfg.color + '20' }]}>
+                    <Ionicons name={cfg.icon as never} size={22} color={cfg.color} />
+                  </View>
+                  <Text style={s.tmplGridName}>{cfg.label}</Text>
+                  <Text style={s.tmplGridMeta}>{count}件</Text>
+                </TouchableOpacity>
+              </StaggerItem>
             );
           })}
         </ScrollView>
@@ -537,7 +547,7 @@ function TemplateBrowser({
           const { label, color, icon } = CAT[cat];
           const count = TEMPLATES[cat].length;
           return (
-            <StaggerItem key={cat} index={i}>
+            <StaggerItem key={cat} index={i} total={CATEGORIES.length}>
               <TouchableOpacity style={s.tmplGridCard}
                 onPress={() => { setActiveCategory(cat); setActiveSubcat(null); setActiveGroup(null); }}
                 activeOpacity={0.75}>
