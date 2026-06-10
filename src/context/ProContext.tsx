@@ -1,15 +1,36 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL, PurchasesPackage } from 'react-native-purchases';
-import type { CustomerInfo } from 'react-native-purchases';
+import type { PurchasesPackage, CustomerInfo } from 'react-native-purchases';
+
+// Expo Go では react-native-purchases が使えないため try/catch でモック切り替え
+let RCPurchases: any = null;
+let RC_LOG_LEVEL: any = null;
+try {
+  const pkg = require('react-native-purchases');
+  RCPurchases = pkg.default;
+  RC_LOG_LEVEL = pkg.LOG_LEVEL;
+} catch {}
+
+const IS_MOCK = RCPurchases === null;
 
 export const FREE_LIMIT = 5;
 
 const RC_API_KEY_ANDROID = 'goog_qbcvEHtHIsnsRMoeCzgmzgyZIPU';
-const RC_API_KEY_IOS     = '';  // iOS実装時に設定
+const RC_API_KEY_IOS     = '';
 export const RC_ENTITLEMENT = 'pro';
 
 export type PurchaseType = 'monthly' | 'lifetime';
+
+// Expo Go 確認用のモックパッケージ
+const MOCK_MONTHLY: PurchasesPackage = {
+  product: { priceString: '¥200', price: 200 } as any,
+  packageType: 'MONTHLY',
+} as any;
+
+const MOCK_LIFETIME: PurchasesPackage = {
+  product: { priceString: '¥800', price: 800 } as any,
+  packageType: 'LIFETIME',
+} as any;
 
 interface ProContextType {
   isPro: boolean;
@@ -38,24 +59,33 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   const [lifetimePackage, setLifetimePackage] = useState<PurchasesPackage | null>(null);
 
   useEffect(() => {
+    if (IS_MOCK) {
+      // Expo Go: モックデータで即座に初期化
+      setMonthlyPackage(MOCK_MONTHLY);
+      setLifetimePackage(MOCK_LIFETIME);
+      setIsLoading(false);
+      return;
+    }
+
+    // 本番ビルド: RevenueCat
     const apiKey = Platform.OS === 'ios' ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
     if (!apiKey) { setIsLoading(false); return; }
 
-    Purchases.setLogLevel(LOG_LEVEL.ERROR);
-    Purchases.configure({ apiKey });
+    RCPurchases.setLogLevel(RC_LOG_LEVEL.ERROR);
+    RCPurchases.configure({ apiKey });
 
-    Purchases.getCustomerInfo().then(info => {
+    RCPurchases.getCustomerInfo().then((info: CustomerInfo) => {
       setIsPro(info.entitlements.active[RC_ENTITLEMENT] !== undefined);
     }).catch(() => {}).finally(() => setIsLoading(false));
 
-    Purchases.getOfferings().then(offerings => {
+    RCPurchases.getOfferings().then((offerings: any) => {
       const current = offerings.current;
       if (!current) return;
       setMonthlyPackage(current.monthly ?? null);
       setLifetimePackage(current.lifetime ?? null);
     }).catch(() => {});
 
-    const removeListener = Purchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
+    const removeListener = RCPurchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
       setIsPro(info.entitlements.active[RC_ENTITLEMENT] !== undefined);
     });
 
@@ -63,13 +93,23 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const purchase = async (pkg: PurchasesPackage) => {
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    if (IS_MOCK) {
+      // Expo Go: 購入成功をシミュレート
+      setIsPro(true);
+      setPaywallVisible(false);
+      return;
+    }
+    const { customerInfo } = await RCPurchases.purchasePackage(pkg);
     setIsPro(customerInfo.entitlements.active[RC_ENTITLEMENT] !== undefined);
     setPaywallVisible(false);
   };
 
   const restorePurchases = async () => {
-    const info = await Purchases.restorePurchases();
+    if (IS_MOCK) {
+      setIsPro(false);
+      return;
+    }
+    const info = await RCPurchases.restorePurchases();
     setIsPro(info.entitlements.active[RC_ENTITLEMENT] !== undefined);
   };
 
