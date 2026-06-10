@@ -216,11 +216,11 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const delay = Math.min(index, 8) * 55;
+    const delay = Math.min(index, 8) * 25;
     const t = setTimeout(() => {
       Animated.timing(anim, {
         toValue: 1,
-        duration: 320,
+        duration: 200,
         useNativeDriver: true,
       }).start();
     }, delay);
@@ -239,12 +239,15 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
 
 // ─── スタガーアイテム ─────────────────────────────────────────────────────────
 
+const STAGGER_VISIBLE_MAX = 12;
 function StaggerItem({ index, total, children }: { index: number; total: number; children: React.ReactNode }) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const skip = index >= STAGGER_VISIBLE_MAX;
+  const anim = useRef(new Animated.Value(skip ? 1 : 0)).current;
   useEffect(() => {
-    const delay = (total - 1 - index) * 35;
+    if (skip) return;
+    const delay = (Math.min(total, STAGGER_VISIBLE_MAX) - 1 - index) * 20;
     const t = setTimeout(() => {
-      Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      Animated.timing(anim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     }, delay);
     return () => clearTimeout(t);
   }, []);
