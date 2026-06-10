@@ -2093,7 +2093,7 @@ export default function HomeScreen() {
       AsyncStorage.getItem('review_add_count').then(v => {
         const n = parseInt(v ?? '0', 10) + 1;
         AsyncStorage.setItem('review_add_count', String(n));
-        if (n === 3) StoreReview.isAvailableAsync().then(ok => { if (ok) StoreReview.requestReview(); });
+        if (n === 3) StoreReview.isAvailableAsync().then((ok: boolean) => { if (ok) StoreReview.requestReview(); });
       });
     }
   };
@@ -2105,7 +2105,7 @@ export default function HomeScreen() {
     AsyncStorage.getItem('review_add_count').then(v => {
       const n = parseInt(v ?? '0', 10) + 1;
       AsyncStorage.setItem('review_add_count', String(n));
-      if (n === 3) StoreReview.isAvailableAsync().then(ok => { if (ok) StoreReview.requestReview(); });
+      if (n === 3) StoreReview.isAvailableAsync().then((ok: boolean) => { if (ok) StoreReview.requestReview(); });
     });
     if (!isPro) {
       addCountRef.current += 1;
@@ -2114,7 +2114,7 @@ export default function HomeScreen() {
     AsyncStorage.getItem('review_add_count').then(v => {
       const n = parseInt(v ?? '0', 10) + 1;
       AsyncStorage.setItem('review_add_count', String(n));
-      if (n === 3) StoreReview.isAvailableAsync().then(ok => { if (ok) StoreReview.requestReview(); });
+      if (n === 3) StoreReview.isAvailableAsync().then((ok: boolean) => { if (ok) StoreReview.requestReview(); });
     });
   };
 
