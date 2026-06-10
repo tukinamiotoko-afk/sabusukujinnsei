@@ -23,7 +23,7 @@
       "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1B6B5A"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.sabusukujinnsei",
       "versionCode": 9
