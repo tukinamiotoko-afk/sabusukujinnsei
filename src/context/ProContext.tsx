@@ -1,17 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import type { PurchasesPackage, CustomerInfo } from 'react-native-purchases';
 
-// Expo Go では react-native-purchases が使えないため try/catch でモック切り替え
+// Expo Go では executionEnvironment === 'storeClient'
+const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
+
+// Expo Go では require 自体をスキップ（JSロードは成功するがネイティブが動かない）
 let RCPurchases: any = null;
 let RC_LOG_LEVEL: any = null;
-try {
-  const pkg = require('react-native-purchases');
-  RCPurchases = pkg.default;
-  RC_LOG_LEVEL = pkg.LOG_LEVEL;
-} catch {}
+if (!IS_EXPO_GO) {
+  try {
+    const pkg = require('react-native-purchases');
+    RCPurchases = pkg.default;
+    RC_LOG_LEVEL = pkg.LOG_LEVEL;
+  } catch {}
+}
 
-const IS_MOCK = RCPurchases === null;
+const IS_MOCK = IS_EXPO_GO || RCPurchases === null;
 
 export const FREE_LIMIT = 5;
 
@@ -21,7 +27,6 @@ export const RC_ENTITLEMENT = 'pro';
 
 export type PurchaseType = 'monthly' | 'lifetime';
 
-// Expo Go 確認用のモックパッケージ
 const MOCK_MONTHLY: PurchasesPackage = {
   product: { priceString: '¥200', price: 200 } as any,
   packageType: 'MONTHLY',
@@ -52,22 +57,20 @@ const ProContext = createContext<ProContextType>({
 });
 
 export function ProProvider({ children }: { children: React.ReactNode }) {
-  const [isPro, setIsPro]                   = useState(false);
-  const [isLoading, setIsLoading]           = useState(true);
-  const [paywallVisible, setPaywallVisible] = useState(false);
-  const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
+  const [isPro, setIsPro]                     = useState(false);
+  const [isLoading, setIsLoading]             = useState(true);
+  const [paywallVisible, setPaywallVisible]   = useState(false);
+  const [monthlyPackage, setMonthlyPackage]   = useState<PurchasesPackage | null>(null);
   const [lifetimePackage, setLifetimePackage] = useState<PurchasesPackage | null>(null);
 
   useEffect(() => {
     if (IS_MOCK) {
-      // Expo Go: モックデータで即座に初期化
       setMonthlyPackage(MOCK_MONTHLY);
       setLifetimePackage(MOCK_LIFETIME);
       setIsLoading(false);
       return;
     }
 
-    // 本番ビルド: RevenueCat
     const apiKey = Platform.OS === 'ios' ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
     if (!apiKey) { setIsLoading(false); return; }
 
@@ -94,7 +97,6 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
 
   const purchase = async (pkg: PurchasesPackage) => {
     if (IS_MOCK) {
-      // Expo Go: 購入成功をシミュレート
       setIsPro(true);
       setPaywallVisible(false);
       return;
