@@ -197,9 +197,7 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
             </View>
           ) : (
             <View style={s.cardRight}>
-              {expense.category !== 'subscription' && (
-                <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
-              )}
+              <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
               <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
             </View>
           )}
@@ -396,7 +394,7 @@ function TemplateBrowser({
                   <Text style={s.tmplItemName}>{item.name}</Text>
                   <Text style={s.tmplItemMeta}>{CAT[cat].label}</Text>
                 </View>
-                {item.amount !== undefined && (
+                {item.amount !== undefined && cat !== 'subscription' && (
                   <Text style={s.tmplItemAmount}>
                     {item.currency === 'USD' ? `$${item.amount}` : yen(item.amount)}
                   </Text>
@@ -410,7 +408,8 @@ function TemplateBrowser({
     );
   }
 
-  const renderGridBilling = (item: TemplateItem) => {
+  const renderGridBilling = (item: TemplateItem, cat?: Category) => {
+    if (cat === 'subscription' || activeCategory === 'subscription') return null;
     if (item.yearlyAmount !== undefined) {
       return (
         <View style={s.tmplGridBilling}>
