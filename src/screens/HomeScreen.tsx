@@ -229,6 +229,7 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
 
   return (
     <Animated.View style={{
+      opacity: anim,
       transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
     }}>
       <ExpenseCard {...props} />
@@ -249,6 +250,7 @@ function StaggerItem({ index, total, children }: { index: number; total: number;
   }, []);
   return (
     <Animated.View style={{
+      opacity: anim,
       transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
     }}>
       {children}
@@ -2650,7 +2652,7 @@ const s = StyleSheet.create({
   searchIcon:             { marginRight: 2 },
   searchInput:            { flex: 1, fontSize: 15, color: '#1A202C', padding: 0 },
   tmplGrid:               { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8, paddingBottom: 24 },
-  tmplGridCard:           { width: TMPL_CARD_W, backgroundColor: '#fff', borderRadius: 14, padding: 10, alignItems: 'center', gap: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
+  tmplGridCard:           { width: TMPL_CARD_W, backgroundColor: '#fff', borderRadius: 14, padding: 10, alignItems: 'center', gap: 5 },
   tmplGridIcon:           { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   tmplGridName:           { fontSize: 11, fontWeight: '600', color: '#1A202C', textAlign: 'center' },
   tmplGridMeta:           { fontSize: 10, color: '#A0AEC0', textAlign: 'center' },
