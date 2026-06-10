@@ -212,8 +212,29 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
 
 // ─── 追加アニメーション付きカード（内部要素スタガー） ────────────────────────
 
-function AnimatedExpenseCard({ isNew, ...props }: { isNew: boolean } & React.ComponentProps<typeof ExpenseCard>) {
-  return <ExpenseCard isNew={isNew} {...props} />;
+function AnimatedExpenseCard({ index, ...props }: { index: number } & React.ComponentProps<typeof ExpenseCard>) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const delay = Math.min(index, 8) * 55;
+    const t = setTimeout(() => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 320,
+        useNativeDriver: true,
+      }).start();
+    }, delay);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <Animated.View style={{
+      opacity: anim,
+      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
+    }}>
+      <ExpenseCard {...props} />
+    </Animated.View>
+  );
 }
 
 // ─── テンプレートブラウザ ─────────────────────────────────────────────────────
@@ -1839,19 +1860,6 @@ export default function HomeScreen() {
   const [adVisible, setAdVisible] = useState(false);
 
   const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
-  const newCardAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (!newlyAddedId) return;
-    newCardAnim.setValue(0);
-    const t = setTimeout(() => {
-      Animated.timing(newCardAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 350);
-    return () => clearTimeout(t);
-  }, [newlyAddedId]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<FormState>(blankForm());
@@ -2178,23 +2186,16 @@ export default function HomeScreen() {
                 if (cDragIdx < cDropIdx && index > cDragIdx && index <= cDropIdx) shiftY = -CARD_ITEM_H;
                 else if (cDragIdx > cDropIdx && index >= cDropIdx && index < cDragIdx) shiftY = CARD_ITEM_H;
               }
-              const isNewCard = exp.id === newlyAddedId;
               return (
                 <Animated.View
                   key={exp.id}
                   style={[
-                    {
-                      transform: [
-                        { translateY: shiftY },
-                        { translateY: isNewCard ? newCardAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) : 0 },
-                      ],
-                      opacity: isNewCard ? newCardAnim : 1,
-                    },
+                    { transform: [{ translateY: shiftY }] },
                     isDragging && { opacity: 0 },
                   ]}
                 >
                   <AnimatedExpenseCard
-                    isNew={false}
+                    index={index}
                     expense={exp}
                     onEdit={() => openEdit(exp)}
                     onDelete={() => handleDelete(exp.id)}
