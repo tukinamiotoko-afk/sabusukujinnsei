@@ -13,30 +13,18 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sabusukujinnsei",
-      "buildNumber": "1",
       "infoPlist": {
-        "NSUserNotificationUsageDescription": "支払い期限の通知を送るために使用します。",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "icon": "./assets/icon.png",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
-      },
-      "package": "com.sabusukujinnsei",
-      "versionCode": 9
-    },
-    "androidStatusBar": {
-      "translucent": false,
-      "backgroundColor": "#64748B"
+      "package": "com.sabusukujinnsei"
     },
     "web": {
       "favicon": "./assets/icon.png"
     },
     "plugins": [
-      "./plugins/withBillingPermission",
       [
         "expo-notifications",
         {
