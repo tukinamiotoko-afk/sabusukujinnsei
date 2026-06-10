@@ -219,11 +219,11 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const delay = Math.min(index, 8) * 25;
+    const delay = Math.min(index, 5) * 40;
     const t = setTimeout(() => {
       Animated.timing(anim, {
         toValue: 1,
-        duration: 200,
+        duration: 250,
         useNativeDriver: true,
       }).start();
     }, delay);
@@ -232,7 +232,8 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
 
   return (
     <Animated.View style={{
-      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
+      opacity: anim,
+      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
     }}>
       <ExpenseCard {...props} />
     </Animated.View>
