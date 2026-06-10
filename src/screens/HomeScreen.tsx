@@ -1084,8 +1084,13 @@ function ExpenseModal({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={() => {
-        if (activeTab === 'template' && tmplCat !== null) handleTmplBack();
-        else onClose();
+        if (calSheet)    { closeCalSheet();     return; }
+        if (billingItem) { closeBillingSheet(); return; }
+        if (quickItem)   { closeQuickPanel();   return; }
+        if (catPanel)    { closeCatPanel();     return; }
+        if (payPanel)    { closePayPanel();     return; }
+        if (activeTab === 'template' && tmplCat !== null) { handleTmplBack(); return; }
+        onClose();
       }}
     >
       <KeyboardAvoidingView
