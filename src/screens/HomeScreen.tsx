@@ -19,6 +19,7 @@ import {
   PanResponder,
   BackHandler,
   LayoutChangeEvent,
+  InteractionManager,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StoreReview from 'expo-store-review';
@@ -216,16 +217,16 @@ function AnimatedExpenseCard({ isNew, ...props }: { isNew: boolean } & React.Com
 
   useEffect(() => {
     if (!isNew) return;
-    // モーダルのslideアニメーション（約320ms）が終わってから再生
-    const timer = setTimeout(() => {
+    // モーダルなど進行中のアニメーションが全て終わってから再生
+    const task = InteractionManager.runAfterInteractions(() => {
       Animated.timing(anim, {
         toValue: 1,
         duration: 400,
         easing: Easing.out(Easing.back(1.2)),
         useNativeDriver: true,
       }).start();
-    }, 350);
-    return () => clearTimeout(timer);
+    });
+    return () => task.cancel();
   }, []);
 
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
