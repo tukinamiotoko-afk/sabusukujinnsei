@@ -254,13 +254,7 @@ function StaggerItem({ index, total, children }: { index: number; total: number;
     return () => clearTimeout(t);
   }, []);
   return (
-    <Animated.View style={{
-      opacity: anim,
-      transform: [
-        { scale:   anim.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) },
-        { rotate:  anim.interpolate({ inputRange: [0, 1], outputRange: ['4deg', '0deg'] }) },
-      ],
-    }}>
+    <Animated.View style={{ opacity: anim }}>
       {children}
     </Animated.View>
   );
