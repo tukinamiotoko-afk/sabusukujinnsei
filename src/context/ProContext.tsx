@@ -85,7 +85,13 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       const current = offerings.current;
       if (!current) return;
       setMonthlyPackage(current.monthly ?? null);
-      setLifetimePackage(current.lifetime ?? null);
+      const lifetime = current.lifetime
+        ?? current.availablePackages?.find((p: any) =>
+            p.packageType === 'LIFETIME' ||
+            p.product?.productIdentifier === 'pro_lifetime'
+          )
+        ?? null;
+      setLifetimePackage(lifetime);
     }).catch(() => {});
 
     const removeListener = RCPurchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
