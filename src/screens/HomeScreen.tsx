@@ -237,6 +237,26 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
   );
 }
 
+// ─── スタガーアイテム ─────────────────────────────────────────────────────────
+
+function StaggerItem({ index, children }: { index: number; children: React.ReactNode }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Animated.timing(anim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
+    }, index * 60);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <Animated.View style={{
+      opacity: anim,
+      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+    }}>
+      {children}
+    </Animated.View>
+  );
+}
+
 // ─── テンプレートブラウザ ─────────────────────────────────────────────────────
 
 type ServiceEntry =
@@ -513,19 +533,21 @@ function TemplateBrowser({
     <View style={{ flex: 1 }}>
       {renderSearchBar(false)}
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
-        {CATEGORIES.map(cat => {
+        {CATEGORIES.map((cat, i) => {
           const { label, color, icon } = CAT[cat];
           const count = TEMPLATES[cat].length;
           return (
-            <TouchableOpacity key={cat} style={s.tmplGridCard}
-              onPress={() => { setActiveCategory(cat); setActiveSubcat(null); setActiveGroup(null); }}
-              activeOpacity={0.75}>
-              <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
-                <Ionicons name={icon as never} size={22} color={color} />
-              </View>
-              <Text style={s.tmplGridName}>{label}</Text>
-              <Text style={s.tmplGridMeta}>{count}件</Text>
-            </TouchableOpacity>
+            <StaggerItem key={cat} index={i}>
+              <TouchableOpacity style={s.tmplGridCard}
+                onPress={() => { setActiveCategory(cat); setActiveSubcat(null); setActiveGroup(null); }}
+                activeOpacity={0.75}>
+                <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
+                  <Ionicons name={icon as never} size={22} color={color} />
+                </View>
+                <Text style={s.tmplGridName}>{label}</Text>
+                <Text style={s.tmplGridMeta}>{count}件</Text>
+              </TouchableOpacity>
+            </StaggerItem>
           );
         })}
       </ScrollView>
