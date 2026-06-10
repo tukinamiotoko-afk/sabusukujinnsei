@@ -441,7 +441,6 @@ function TemplateBrowser({
         {renderSearchBar(false)}
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.tmplGrid}>
           {plans.map((item, i) => {
-            const label = item.planName ?? item.name;
             return (
               <StaggerItem key={i} index={i} total={plans.length}>
                 <TouchableOpacity style={s.tmplGridCard}
@@ -449,7 +448,7 @@ function TemplateBrowser({
                   <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
                     <Ionicons name={icon as never} size={22} color={color} />
                   </View>
-                  <Text style={s.tmplGridName} numberOfLines={2}>{label}</Text>
+                  <Text style={s.tmplGridName} numberOfLines={1}>{item.planName ? item.planName.replace(/プラン$/, '').trim() || item.name : item.name}</Text>
                   {renderGridBilling(item)}
                 </TouchableOpacity>
               </StaggerItem>
@@ -486,8 +485,7 @@ function TemplateBrowser({
                       : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
                           <Ionicons name={icon as never} size={22} color={color} />
                         </View>}
-                    <Text style={s.tmplGridName} numberOfLines={2}>{entry.key}</Text>
-                    <Text style={s.tmplGridMeta}>{entry.items.length}プラン</Text>
+                    <Text style={s.tmplGridName} numberOfLines={1}>{entry.key}</Text>
                   </TouchableOpacity>
                 </StaggerItem>
               );
@@ -502,7 +500,7 @@ function TemplateBrowser({
                     : <View style={[s.tmplGridIcon, { backgroundColor: color + '20' }]}>
                         <Ionicons name={icon as never} size={22} color={color} />
                       </View>}
-                  <Text style={s.tmplGridName} numberOfLines={2}>{item.name}</Text>
+                  <Text style={s.tmplGridName} numberOfLines={1}>{item.name}</Text>
                   {renderGridBilling(item)}
                 </TouchableOpacity>
               </StaggerItem>
@@ -2654,9 +2652,9 @@ const s = StyleSheet.create({
   searchIcon:             { marginRight: 2 },
   searchInput:            { flex: 1, fontSize: 15, color: '#1A202C', padding: 0 },
   tmplGrid:               { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8, paddingBottom: 24 },
-  tmplGridCard:           { width: TMPL_CARD_W, backgroundColor: '#fff', borderRadius: 14, padding: 10, alignItems: 'center', gap: 5 },
+  tmplGridCard:           { width: TMPL_CARD_W, height: 90, backgroundColor: '#fff', borderRadius: 14, padding: 10, alignItems: 'center', justifyContent: 'center', gap: 5 },
   tmplGridIcon:           { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  tmplGridName:           { fontSize: 11, fontWeight: '600', color: '#1A202C', textAlign: 'center' },
+  tmplGridName:           { fontSize: 11, fontWeight: '600', color: '#1A202C', textAlign: 'center', width: '100%' },
   tmplGridMeta:           { fontSize: 10, color: '#A0AEC0', textAlign: 'center' },
   tmplGridAmt:            { fontSize: 10, fontWeight: '700', color: '#475569', textAlign: 'center' },
   tmplGridBilling:        { width: '100%', gap: 3 },
