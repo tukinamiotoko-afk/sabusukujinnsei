@@ -25,7 +25,7 @@ import * as StoreReview from 'expo-store-review';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
-const TMPL_CARD_W = Math.floor((SCREEN_W - 24 - 24) / 4);
+const TMPL_CARD_W = Math.floor((SCREEN_W - 24 - 16) / 3);
 const SWIPE_ACTION_W   = 96;
 const SWIPE_THRESHOLD  = 44;
 import { useSafeAreaInsets, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -2652,7 +2652,7 @@ const s = StyleSheet.create({
   searchInput:            { flex: 1, fontSize: 15, color: '#1A202C', padding: 0 },
   tmplGrid:               { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8, paddingBottom: 24 },
   tmplGridCard:           { width: TMPL_CARD_W, height: 90, backgroundColor: '#fff', borderRadius: 14, padding: 10, alignItems: 'center', justifyContent: 'center', gap: 5 },
-  tmplGridIcon:           { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  tmplGridIcon:           { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   tmplGridName:           { fontSize: 11, fontWeight: '600', color: '#1A202C', textAlign: 'center', width: '100%' },
   tmplGridMeta:           { fontSize: 10, color: '#A0AEC0', textAlign: 'center' },
   tmplGridAmt:            { fontSize: 10, fontWeight: '700', color: '#475569', textAlign: 'center' },
