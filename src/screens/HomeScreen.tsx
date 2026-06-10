@@ -196,7 +196,9 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
             </View>
           ) : (
             <View style={s.cardRight}>
-              <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
+              {expense.category !== 'subscription' && (
+                <Text style={s.cardAmount}>{yen(expense.amount)}</Text>
+              )}
               <Ionicons name="chevron-forward" size={14} color="#CBD5E0" style={{ marginTop: 2 }} />
             </View>
           )}
@@ -206,6 +208,27 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
   );
 }
 
+
+// ─── 追加アニメーション付きカード ────────────────────────────────────────────
+
+function AnimatedExpenseCard({ isNew, ...props }: { isNew: boolean } & React.ComponentProps<typeof ExpenseCard>) {
+  const translateY = useRef(new Animated.Value(isNew ? 32 : 0)).current;
+  const opacity    = useRef(new Animated.Value(isNew ? 0  : 1)).current;
+
+  useEffect(() => {
+    if (!isNew) return;
+    Animated.parallel([
+      Animated.timing(translateY, { toValue: 0, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 280, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ transform: [{ translateY }], opacity }}>
+      <ExpenseCard {...props} />
+    </Animated.View>
+  );
+}
 
 // ─── テンプレートブラウザ ─────────────────────────────────────────────────────
 
@@ -1829,6 +1852,7 @@ export default function HomeScreen() {
   })).current;
   const [adVisible, setAdVisible] = useState(false);
 
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<FormState>(blankForm());
@@ -2005,6 +2029,7 @@ export default function HomeScreen() {
     setExpenses(prev =>
       editId ? prev.map(e => e.id === editId ? exp : e) : [...prev, exp]
     );
+    if (!editId) setNewlyAddedId(exp.id);
     setModalVisible(false);
     if (!editId) {
       if (!isPro) {
@@ -2021,6 +2046,7 @@ export default function HomeScreen() {
 
   const handleQuickAdd = (exp: Expense) => {
     setExpenses(prev => [...prev, exp]);
+    setNewlyAddedId(exp.id);
     setModalVisible(false);
     AsyncStorage.getItem('review_add_count').then(v => {
       const n = parseInt(v ?? '0', 10) + 1;
@@ -2161,7 +2187,8 @@ export default function HomeScreen() {
                     isDragging && { opacity: 0 },
                   ]}
                 >
-                  <ExpenseCard
+                  <AnimatedExpenseCard
+                    isNew={exp.id === newlyAddedId}
                     expense={exp}
                     onEdit={() => openEdit(exp)}
                     onDelete={() => handleDelete(exp.id)}
