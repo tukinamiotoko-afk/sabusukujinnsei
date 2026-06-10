@@ -232,7 +232,6 @@ function AnimatedExpenseCard({ index, ...props }: { index: number } & React.Comp
 
   return (
     <Animated.View style={{
-      opacity: anim,
       transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
     }}>
       <ExpenseCard {...props} />
