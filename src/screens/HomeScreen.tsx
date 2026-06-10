@@ -212,16 +212,24 @@ function ExpenseCard({ expense, onEdit, onDelete, onCardTap, reorderMode, onLayo
 // ─── 追加アニメーション付きカード ────────────────────────────────────────────
 
 function AnimatedExpenseCard({ isNew, ...props }: { isNew: boolean } & React.ComponentProps<typeof ExpenseCard>) {
-  const translateY = useRef(new Animated.Value(isNew ? 32 : 0)).current;
-  const opacity    = useRef(new Animated.Value(isNew ? 0  : 1)).current;
+  const anim = useRef(new Animated.Value(isNew ? 0 : 1)).current;
 
   useEffect(() => {
     if (!isNew) return;
-    Animated.parallel([
-      Animated.timing(translateY, { toValue: 0, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(opacity,    { toValue: 1, duration: 280, useNativeDriver: true }),
-    ]).start();
+    // モーダルのslideアニメーション（約320ms）が終わってから再生
+    const timer = setTimeout(() => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.back(1.2)),
+        useNativeDriver: true,
+      }).start();
+    }, 350);
+    return () => clearTimeout(timer);
   }, []);
+
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
+  const opacity    = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.6, 1] });
 
   return (
     <Animated.View style={{ transform: [{ translateY }], opacity }}>
