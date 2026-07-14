@@ -1575,18 +1575,32 @@ function ExpenseModal({
                       </TouchableOpacity>
                     </View>
                     {cycleMode === 'days' ? (
-                      <View style={[s.qaDayRow, { marginTop: 12 }]}>
-                        <TextInput
-                          style={s.qaDayInput}
-                          value={tempCycleDays}
-                          onChangeText={v => setBillingItem(b => b && ({ ...b, tempCycleDays: v.replace(/[^0-9]/g, '') }))}
-                          placeholder=""
-                          placeholderTextColor="#CBD5E0"
-                          keyboardType="number-pad"
-                          maxLength={3}
-                          autoFocus
-                        />
-                        <Text style={s.qaDayLabel}>日ごと</Text>
+                      <View style={{ marginTop: 12 }}>
+                        <View style={s.qaDayRow}>
+                          <TextInput
+                            style={s.qaDayInput}
+                            value={tempCycleDays}
+                            onChangeText={v => setBillingItem(b => b && ({ ...b, tempCycleDays: v.replace(/[^0-9]/g, '') }))}
+                            placeholder=""
+                            placeholderTextColor="#CBD5E0"
+                            keyboardType="number-pad"
+                            maxLength={3}
+                            autoFocus
+                          />
+                          <Text style={s.qaDayLabel}>日ごと</Text>
+                        </View>
+                        <View style={s.cycleChips}>
+                          {[{ label: '1週間', days: '7' }, { label: '2週間', days: '14' }, { label: '3週間', days: '21' }, { label: '4週間', days: '28' }, { label: '1年', days: '365' }].map(({ label, days }) => (
+                            <TouchableOpacity
+                              key={days}
+                              style={[s.cycleChip, tempCycleDays === days && s.cycleChipActive]}
+                              onPress={() => setBillingItem(b => b && ({ ...b, tempCycleDays: days }))}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[s.cycleChipTxt, tempCycleDays === days && s.cycleChipTxtActive]}>{label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -2751,6 +2765,11 @@ const s = StyleSheet.create({
   qaPanelBody:      { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32, gap: 16 },
   qaPanelIcon:      { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   qaDayPrompt:      { fontSize: 12, fontWeight: '700', color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: 0.5, alignSelf: 'flex-start' },
+  cycleChips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  cycleChip:        { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  cycleChipActive:  { backgroundColor: '#475569', borderColor: '#475569' },
+  cycleChipTxt:     { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  cycleChipTxtActive: { color: '#fff' },
   qaDayRow:         { flexDirection: 'row', alignItems: 'center', gap: 12 },
   qaDayLabel:       { fontSize: 18, fontWeight: '600', color: '#4A5568' },
   qaDayInput:       { fontSize: 38, fontWeight: '800', color: '#475569', textAlign: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 10, width: 110, borderWidth: 2, borderColor: '#D1D5DB' },
