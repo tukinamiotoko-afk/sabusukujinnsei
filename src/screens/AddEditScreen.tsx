@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays, addMonths, addYears } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { RootStackParamList, Category, PaymentCycle, Expense } from '../types';
 import { addExpense, updateExpense, generateId } from '../utils/storage';
@@ -78,6 +78,22 @@ export function AddEditScreen({ navigation, route }: Props) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCycleSelect = (selected: PaymentCycle) => {
+    setCycle(selected);
+    const today = new Date();
+    const nextDateByCycle: Record<PaymentCycle, Date> = {
+      weekly:       addDays(today, 7),
+      monthly:      addMonths(today, 1),
+      yearly:       addYears(today, 1),
+      every30days:  addDays(today, 30),
+      every45days:  addDays(today, 45),
+      every2months: addMonths(today, 2),
+      every3months: addMonths(today, 3),
+      irregular:    today,
+    };
+    setNextDate(nextDateByCycle[selected]);
   };
 
   const categoryOptions = CATEGORIES.map(cat => ({
@@ -246,7 +262,7 @@ export function AddEditScreen({ navigation, route }: Props) {
           title="支払周期を選択"
           options={cycleOptions}
           selected={cycle}
-          onSelect={setCycle}
+          onSelect={handleCycleSelect}
           onClose={() => setShowCyclePicker(false)}
         />
       </View>
