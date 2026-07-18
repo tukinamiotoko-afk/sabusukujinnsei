@@ -30,14 +30,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [notifSettings, setNotifSettingsState] = useState<NotificationSettings>(DEFAULT);
 
   useEffect(() => {
-    AsyncStorage.getItem(KEY).then(json => {
-      if (!json) return;
-      const parsed = JSON.parse(json);
-      // migrate: daysBefore was a single number in older versions
-      if (typeof parsed.daysBefore === 'number') {
-        parsed.daysBefore = [parsed.daysBefore];
+    AsyncStorage.multiGet([KEY, 'notif_auto_enabled']).then(([settingsItem, autoItem]) => {
+      const json = settingsItem[1];
+      const autoEnabled = autoItem[1] === 'true';
+      if (json) {
+        const parsed = JSON.parse(json);
+        if (typeof parsed.daysBefore === 'number') {
+          parsed.daysBefore = [parsed.daysBefore];
+        }
+        setNotifSettingsState({ ...DEFAULT, ...parsed });
+      } else if (autoEnabled) {
+        // オンボーディングで通知許可が取れた場合は自動でオン
+        setNotifSettingsState({ ...DEFAULT, enabled: true });
       }
-      setNotifSettingsState({ ...DEFAULT, ...parsed });
     });
   }, []);
 

@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestNotificationPermission } from '../utils/notifications';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -68,11 +70,19 @@ export default function OnboardingScreen({ onDone }: Props) {
     setPage(p);
   };
 
+  const handleDone = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      await AsyncStorage.setItem('notif_auto_enabled', 'true');
+    }
+    onDone();
+  };
+
   const next = () => {
     if (page < SLIDES.length - 1) {
       scrollRef.current?.scrollTo({ x: SW * (page + 1), animated: true });
     } else {
-      onDone();
+      handleDone();
     }
   };
 
@@ -108,7 +118,7 @@ export default function OnboardingScreen({ onDone }: Props) {
 
       {/* ボタン */}
       <View style={c.footer}>
-        <TouchableOpacity style={c.skipBtn} onPress={onDone} activeOpacity={0.6}>
+        <TouchableOpacity style={c.skipBtn} onPress={handleDone} activeOpacity={0.6}>
           <Text style={c.skipTxt}>スキップ</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[c.nextBtn, isLast && c.nextBtnLast]} onPress={next} activeOpacity={0.85}>
