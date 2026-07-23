@@ -1,32 +1,54 @@
 {
   "expo": {
-    "name": "固定費管理",
+    "name": "サブスク管理＆固定費管理",
     "slug": "sabusukujinnsei",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6C63FF"
+      "backgroundColor": "#1B6B5A"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sabusukujinnsei"
+      "bundleIdentifier": "com.sabusukujinnsei",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6C63FF"
+        "backgroundColor": "#FFFFFF"
       },
-      "package": "com.sabusukujinnsei"
+      "package": "com.sabusukujinnsei",
+      "versionCode": 10
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1B6B5A"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-6253728869800176~1318809922",
+          "iosAppId": "ca-app-pub-6253728869800176~5806214224"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f19f0db3-4d71-411e-a510-f92d5f4b16c4"
+      }
+    }
   }
 }
